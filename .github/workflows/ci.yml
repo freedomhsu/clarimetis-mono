@@ -38,6 +38,14 @@ jobs:
         run: uv run pytest tests/ -q --tb=short
         env:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          GCP_PROJECT_ID: "test-project"
+          GCS_BUCKET_NAME: "test-bucket"
+          CLERK_SECRET_KEY: "sk_test_placeholder"
+          CLERK_JWT_ISSUER: "https://placeholder.clerk.accounts.dev"
+          STRIPE_SECRET_KEY: "sk_test_placeholder"
+          STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
+          STRIPE_PRO_MONTHLY_PRICE_ID: "price_placeholder_monthly"
+          STRIPE_PRO_ANNUAL_PRICE_ID: "price_placeholder_annual"
 
       # ── Frontend (vitest + tsc) ─────────────────────────────────────────────
       - uses: actions/setup-node@v4
