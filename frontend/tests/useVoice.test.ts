@@ -16,7 +16,7 @@ vi.mock("@/lib/api", () => ({
 
 import { api } from "@/lib/api";
 
-const mockApi = api as { transcribeAudio: ReturnType<typeof vi.fn> };
+const mockApi = api as unknown as { transcribeAudio: ReturnType<typeof vi.fn> };
 
 // ── MediaRecorder mock factory ────────────────────────────────────────────
 

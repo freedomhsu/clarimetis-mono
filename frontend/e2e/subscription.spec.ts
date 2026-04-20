@@ -276,7 +276,7 @@ test.describe("Media upload — happy path", () => {
     await expect.poll(() => sentBody, { timeout: 8_000 }).not.toBeNull();
 
     // The request body should include the uploaded URL in media_urls
-    const mediaUrls = (sentBody as { media_urls?: string[] })?.media_urls ?? [];
+    const mediaUrls = (sentBody as unknown as { media_urls?: string[] })?.media_urls ?? [];
     expect(mediaUrls).toContain(uploadedUrl);
   });
 });
