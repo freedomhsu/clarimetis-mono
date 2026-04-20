@@ -2,6 +2,7 @@ import filetype
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
+from app.config import SettingsDep
 from app.middleware.auth import get_current_user_id
 from app.middleware.subscription import require_pro
 from app.models.user import User
@@ -19,8 +20,6 @@ _ALLOWED_TYPES = {
     "video/quicktime",
 }
 
-_MAX_BYTES = 50 * 1024 * 1024  # 50 MB
-
 
 class MediaUploadResponse(BaseModel):
     url: str        # fresh 1-hour signed URL for immediate preview
@@ -31,6 +30,7 @@ class MediaUploadResponse(BaseModel):
 @router.post("/upload", response_model=MediaUploadResponse)
 async def upload_file(
     request: Request,
+    settings: SettingsDep,
     file: UploadFile = File(...),
     clerk_user_id: str = Depends(get_current_user_id),
     _pro: User = Depends(require_pro),
@@ -42,13 +42,15 @@ async def upload_file(
 
     # Reject oversized uploads before reading the body to avoid OOM on huge files.
     content_length = int(request.headers.get("content-length", 0))
-    if content_length > _MAX_BYTES:
-        raise HTTPException(status_code=413, detail="File exceeds the 50 MB limit.")
+    if content_length > settings.max_upload_bytes:
+        max_mb = settings.max_upload_bytes // (1024 * 1024)
+        raise HTTPException(status_code=413, detail=f"File exceeds the {max_mb} MB limit.")
 
     content = await file.read()
     # Re-check actual size in case Content-Length header was missing or spoofed.
-    if len(content) > _MAX_BYTES:
-        raise HTTPException(status_code=413, detail="File exceeds the 50 MB limit.")
+    if len(content) > settings.max_upload_bytes:
+        max_mb = settings.max_upload_bytes // (1024 * 1024)
+        raise HTTPException(status_code=413, detail=f"File exceeds the {max_mb} MB limit.")
 
     # Verify the actual file magic bytes — never trust the client-supplied Content-Type.
     detected = filetype.guess(content)

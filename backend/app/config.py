@@ -43,10 +43,20 @@ class Settings(BaseSettings):
     # Feature limits — override via env to tune without code changes
     # How long (seconds) analytics results are cached in-memory per user
     analytics_cache_ttl: int = 3600
+    # Maximum number of users tracked by the analytics in-memory TTL cache
+    analytics_cache_maxsize: int = 1_000
     # Maximum daily messages for free-tier users
     free_daily_message_limit: int = 5
     # Maximum upload size in bytes (default 50 MB)
     max_upload_bytes: int = 50 * 1024 * 1024
+    # Safety banner prepended to streamed responses when a crisis is detected
+    # (markdown; override to localise or update the crisis line number)
+    crisis_banner_text: str = (
+        "I want to make sure you're safe right now. "
+        "If you're in crisis, please reach out to the **988 Suicide & Crisis Lifeline** "
+        "by calling or texting **988** (US), or chat at https://988lifeline.org. "
+        "I'm here with you.\n\n"
+    )
 
     @property
     def cors_origins_list(self) -> list[str]:

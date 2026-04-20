@@ -18,10 +18,10 @@ from app.services.gemini import generate_analytics
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
-# Bounded TTL cache: max 1 000 users, entries expire after analytics_cache_ttl seconds.
+# Bounded TTL cache: max analytics_cache_maxsize users, entries expire after analytics_cache_ttl seconds.
 # TTLCache handles eviction automatically — no memory leak.
-_analytics_cache: TTLCache = TTLCache(maxsize=1_000, ttl=get_settings().analytics_cache_ttl)
-_analytics_locks: TTLCache = TTLCache(maxsize=1_000, ttl=get_settings().analytics_cache_ttl * 2)
+_analytics_cache: TTLCache = TTLCache(maxsize=get_settings().analytics_cache_maxsize, ttl=get_settings().analytics_cache_ttl)
+_analytics_locks: TTLCache = TTLCache(maxsize=get_settings().analytics_cache_maxsize, ttl=get_settings().analytics_cache_ttl * 2)
 
 
 @router.get("/summary", response_model=AnalyticsSummary)

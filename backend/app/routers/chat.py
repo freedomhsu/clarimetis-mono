@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import SettingsDep
 from app.database import AsyncSessionLocal, get_db
 from app.models.message import Message
 from app.models.session import ChatSession
@@ -23,13 +24,6 @@ from app.services.sentiment import score_sentiment
 from app.services.storage import is_blob_path, sign_blob_path
 
 router = APIRouter(prefix="/sessions/{session_id}/messages", tags=["chat"])
-
-_CRISIS_BANNER = (
-    "I want to make sure you're safe right now. "
-    "If you're in crisis, please reach out to the **988 Suicide & Crisis Lifeline** "
-    "by calling or texting **988** (US), or chat at https://988lifeline.org. "
-    "I'm here with you.\n\n"
-)
 
 
 async def _get_session_for_user(
@@ -146,6 +140,7 @@ async def send_message(
     session_id: uuid.UUID,
     body: ChatRequest,
     background_tasks: BackgroundTasks,
+    settings: SettingsDep,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(check_message_quota),
 ) -> StreamingResponse:
@@ -210,8 +205,8 @@ async def send_message(
         yield "\x00STATUS\x00:Generating response...\n"
 
         if is_crisis:
-            accumulated.append(_CRISIS_BANNER)
-            yield _CRISIS_BANNER
+            accumulated.append(settings.crisis_banner_text)
+            yield settings.crisis_banner_text
 
         async for chunk in stream_chat_response(
             user_message=body.content,
