@@ -56,7 +56,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm ci --omit=optional
 
       - name: TypeScript type-check
         working-directory: frontend
@@ -142,7 +142,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm ci --omit=optional
 
       - name: Install Playwright browsers
         working-directory: frontend
