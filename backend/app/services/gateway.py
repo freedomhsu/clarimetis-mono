@@ -18,11 +18,9 @@ import json
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-from app.config import settings
-from app.services.gcp_credentials import get_gcp_credentials
+from app.config import get_settings  # noqa: F401
+from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
-
-vertexai.init(project=settings.gcp_project_id, location=settings.gcp_location, credentials=get_gcp_credentials())
 
 # ── Intent taxonomy ────────────────────────────────────────────────────────────
 
@@ -119,6 +117,7 @@ Your core approach:
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 async def classify_intent(message: str) -> str:
+    init_vertexai()
     """Classify the user's message into a specialist intent.
 
     Returns one of the INTENT_* constants. Defaults to INTENT_WELLNESS_COACH

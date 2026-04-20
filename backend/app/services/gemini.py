@@ -8,27 +8,25 @@ import vertexai
 logger = logging.getLogger(__name__)
 from vertexai.generative_models import Content, GenerationConfig, GenerativeModel, Part
 
-from app.config import settings
+from app.config import get_settings
 from app.services.gateway import SYSTEM_PROMPTS, INTENT_WELLNESS_COACH
-from app.services.gcp_credentials import get_gcp_credentials
+from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
-vertexai.init(project=settings.gcp_project_id, location=settings.gcp_location, credentials=get_gcp_credentials())
-
-# Langfuse tracing — only active when keys are configured
-if settings.langfuse_public_key and settings.langfuse_secret_key:
+# Langfuse tracing — only active when keys are configured.
+# The @observe decorator must be defined at module level (before function definitions),
+# so we set up Langfuse here but defer vertexai.init() to first actual use.
+if get_settings().langfuse_public_key and get_settings().langfuse_secret_key:
     import os
     # Must set env vars BEFORE importing langfuse — its client initialises at import time
-    os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
-    os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
-    os.environ["LANGFUSE_HOST"] = settings.langfuse_base_url
+    os.environ["LANGFUSE_PUBLIC_KEY"] = get_settings().langfuse_public_key
+    os.environ["LANGFUSE_SECRET_KEY"] = get_settings().langfuse_secret_key
+    os.environ["LANGFUSE_HOST"] = get_settings().langfuse_base_url
     from langfuse.decorators import langfuse_context, observe
-    # Reconfigure the decorator singleton with flush_at=1 so every trace
-    # ships immediately rather than being batched (important for short-lived requests)
     langfuse_context.configure(
-        public_key=settings.langfuse_public_key,
-        secret_key=settings.langfuse_secret_key,
-        host=settings.langfuse_base_url,
+        public_key=get_settings().langfuse_public_key,
+        secret_key=get_settings().langfuse_secret_key,
+        host=get_settings().langfuse_base_url,
         flush_at=1,
     )
     _tracing_enabled = True
@@ -53,6 +51,7 @@ async def stream_chat_response(
     system_prompt: str | None = None,
     profile_context: str | None = None,
 ) -> AsyncGenerator[str, None]:
+    init_vertexai()
     logger.info("[Langfuse] trace: stream_chat_response started")
     effective_prompt = system_prompt or _DEFAULT_SYSTEM_PROMPT
     model = GenerativeModel("gemini-2.5-pro", system_instruction=effective_prompt)
@@ -112,6 +111,7 @@ async def stream_chat_response(
 
 @observe(name="generate_session_title")
 async def generate_session_title(first_message: str) -> str:
+    init_vertexai()
     logger.info("[Langfuse] trace: generate_session_title started")
     try:
         model = GenerativeModel("gemini-2.0-flash")
@@ -136,6 +136,7 @@ async def generate_session_title(first_message: str) -> str:
 @observe(name="generate_session_summary")
 async def generate_session_summary(messages: list[dict]) -> str:
     """Produce a 1-2 sentence summary of a session for storage and future RAG context."""
+    init_vertexai()
     try:
         model = GenerativeModel("gemini-2.0-flash")
         history_text = "\n".join(
@@ -159,6 +160,7 @@ async def generate_session_summary(messages: list[dict]) -> str:
 
 @observe(name="generate_analytics")
 async def generate_analytics(conversation_snippets: list[str]) -> dict:
+    init_vertexai()
     logger.info("[Langfuse] trace: generate_analytics started (snippets=%d)", len(conversation_snippets))
     model = GenerativeModel("gemini-2.5-pro")
     content = "\n---\n".join(conversation_snippets[:50])

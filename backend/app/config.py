@@ -1,3 +1,8 @@
+# backend/app/config.py
+from functools import lru_cache
+from typing import Annotated
+
+from fastapi import Depends
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,4 +53,16 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",")]
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> "Settings":
+    """Return the cached Settings singleton.
+
+    Use ``Depends(get_settings)`` in route handlers.  Override in tests via
+    ``app.dependency_overrides[get_settings] = lambda: Settings(...)``.
+    """
+    return Settings()
+
+
+# Convenience type alias for FastAPI route handler signatures:
+#   async def my_route(settings: SettingsDep) -> ...:
+SettingsDep = Annotated[Settings, Depends(get_settings)]

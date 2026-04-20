@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import get_settings
 from app.database import get_db
 from app.middleware.subscription import require_pro
 from app.models.message import Message
@@ -20,8 +20,8 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 # Bounded TTL cache: max 1 000 users, entries expire after analytics_cache_ttl seconds.
 # TTLCache handles eviction automatically — no memory leak.
-_analytics_cache: TTLCache = TTLCache(maxsize=1_000, ttl=settings.analytics_cache_ttl)
-_analytics_locks: TTLCache = TTLCache(maxsize=1_000, ttl=settings.analytics_cache_ttl * 2)
+_analytics_cache: TTLCache = TTLCache(maxsize=1_000, ttl=get_settings().analytics_cache_ttl)
+_analytics_locks: TTLCache = TTLCache(maxsize=1_000, ttl=get_settings().analytics_cache_ttl * 2)
 
 
 @router.get("/summary", response_model=AnalyticsSummary)

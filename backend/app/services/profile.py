@@ -24,15 +24,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from vertexai.generative_models import GenerativeModel
 
-from app.config import settings
+from app.config import get_settings  # noqa: F401
 from app.database import AsyncSessionLocal
 from app.models.message import Message
 from app.models.session import ChatSession
 from app.models.user_profile import UserProfile
-from app.services.gcp_credentials import get_gcp_credentials
+from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
-
-vertexai.init(project=settings.gcp_project_id, location=settings.gcp_location, credentials=get_gcp_credentials())
 
 _PROFILE_PROMPT = """You are a pattern-recognition engine for a wellness coaching app.
 Analyse the user messages below and extract four things.
@@ -60,6 +58,7 @@ _SENTIMENT_WINDOW = 50
 
 
 async def _extract_profile_fields(messages: list[str]) -> dict:
+    init_vertexai()
     """Call Gemini to extract identity fields from a list of user messages."""
     if not messages:
         return {

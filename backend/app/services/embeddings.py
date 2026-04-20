@@ -3,14 +3,7 @@ import asyncio
 import vertexai
 from vertexai.language_models import TextEmbeddingModel
 
-from app.config import settings
-from app.services.gcp_credentials import get_gcp_credentials
-
-vertexai.init(
-    project=settings.gcp_project_id,
-    location=settings.gcp_location,
-    credentials=get_gcp_credentials(),
-)
+from app.services.gcp_credentials import init_vertexai
 
 _model: TextEmbeddingModel | None = None
 
@@ -18,6 +11,7 @@ _model: TextEmbeddingModel | None = None
 def _get_model() -> TextEmbeddingModel:
     global _model
     if _model is None:
+        init_vertexai()
         _model = TextEmbeddingModel.from_pretrained("text-embedding-004")
     return _model
 

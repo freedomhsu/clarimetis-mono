@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import get_settings, SettingsDep
 from app.database import get_db
 from app.models.user import User
 
@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-stripe.api_key = settings.stripe_secret_key
-
 
 @router.post("/stripe")
 async def handle_stripe_webhook(
+    settings: SettingsDep,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    stripe.api_key = settings.stripe_secret_key
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 

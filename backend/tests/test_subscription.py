@@ -73,8 +73,8 @@ async def test_check_message_quota_passes_free_user_under_limit():
     db = AsyncMock()
     db.scalar.return_value = 2  # 2 messages sent today, limit is 5
 
-    with patch("app.middleware.subscription.settings") as mock_settings:
-        mock_settings.free_daily_message_limit = 5
+    mock_settings = MagicMock(free_daily_message_limit=5)
+    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
         result = await check_message_quota(user=user, db=db)
 
     assert result is user
@@ -85,8 +85,8 @@ async def test_check_message_quota_blocks_free_user_at_limit():
     db = AsyncMock()
     db.scalar.return_value = 5  # exactly at the limit
 
-    with patch("app.middleware.subscription.settings") as mock_settings:
-        mock_settings.free_daily_message_limit = 5
+    mock_settings = MagicMock(free_daily_message_limit=5)
+    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
         with pytest.raises(HTTPException) as exc_info:
             await check_message_quota(user=user, db=db)
 
@@ -102,8 +102,8 @@ async def test_check_message_quota_blocks_free_user_over_limit():
     db = AsyncMock()
     db.scalar.return_value = 10  # well over the limit
 
-    with patch("app.middleware.subscription.settings") as mock_settings:
-        mock_settings.free_daily_message_limit = 5
+    mock_settings = MagicMock(free_daily_message_limit=5)
+    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
         with pytest.raises(HTTPException) as exc_info:
             await check_message_quota(user=user, db=db)
 
@@ -116,8 +116,8 @@ async def test_check_message_quota_treats_null_count_as_zero():
     db = AsyncMock()
     db.scalar.return_value = None
 
-    with patch("app.middleware.subscription.settings") as mock_settings:
-        mock_settings.free_daily_message_limit = 5
+    mock_settings = MagicMock(free_daily_message_limit=5)
+    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
         result = await check_message_quota(user=user, db=db)
 
     assert result is user

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import get_settings, SettingsDep
 from app.database import get_db
 from app.middleware.auth import get_current_user_id
 from app.models.user import User
@@ -90,6 +90,7 @@ async def get_me(
 
 @router.post("/subscribe", response_model=BillingUrlResponse)
 async def subscribe(
+    settings: SettingsDep,
     body: SubscribeRequest = SubscribeRequest(),
     clerk_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -124,6 +125,7 @@ async def subscribe(
 
 @router.post("/billing-portal", response_model=BillingUrlResponse)
 async def billing_portal(
+    settings: SettingsDep,
     clerk_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict:

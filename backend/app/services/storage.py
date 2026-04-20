@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from google.cloud import storage
 
-from app.config import settings
+from app.config import get_settings
 from app.services.gcp_credentials import get_gcp_credentials
 
 _client: storage.Client | None = None
@@ -19,7 +19,7 @@ def _get_client() -> storage.Client:
     global _client
     if _client is None:
         credentials = get_gcp_credentials()
-        _client = storage.Client(project=settings.gcp_project_id, credentials=credentials)
+        _client = storage.Client(project=get_settings().gcp_project_id, credentials=credentials)
     return _client
 
 
@@ -33,7 +33,7 @@ async def upload_media(
     signed URL ensures that stored messages remain accessible indefinitely.
     """
     client = _get_client()
-    bucket = client.bucket(settings.gcs_bucket_name)
+    bucket = client.bucket(get_settings().gcs_bucket_name)
     # Scope uploads under the user's ID to prevent path traversal issues.
     safe_filename = filename.replace("/", "_").replace("..", "_")
     blob_name = f"uploads/{user_id}/{uuid.uuid4()}_{safe_filename}"
@@ -50,7 +50,7 @@ async def upload_media(
 async def sign_blob_path(blob_path: str) -> str:
     """Generate a fresh 1-hour signed GET URL for a GCS blob path."""
     client = _get_client()
-    bucket = client.bucket(settings.gcs_bucket_name)
+    bucket = client.bucket(get_settings().gcs_bucket_name)
     blob = bucket.blob(blob_path)
     url: str = await asyncio.to_thread(
         blob.generate_signed_url,

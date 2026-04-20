@@ -19,7 +19,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import get_settings
 from app.database import get_db
 from app.middleware.auth import get_current_user_id
 from app.models.message import Message
@@ -86,13 +86,13 @@ async def check_message_quota(
         )
     )
 
-    if (count or 0) >= settings.free_daily_message_limit:
+    if (count or 0) >= get_settings().free_daily_message_limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={
                 "code": "daily_limit_reached",
-                "message": f"Free accounts are limited to {settings.free_daily_message_limit} messages per day.",
-                "limit": settings.free_daily_message_limit,
+                "message": f"Free accounts are limited to {get_settings().free_daily_message_limit} messages per day.",
+                "limit": get_settings().free_daily_message_limit,
                 "upgrade_path": "/users/subscribe",
             },
         )

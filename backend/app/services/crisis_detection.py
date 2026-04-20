@@ -5,13 +5,11 @@ import logging
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-from app.config import settings
-from app.services.gcp_credentials import get_gcp_credentials
+from app.config import get_settings  # noqa: F401 — imported so get_settings() resolves correctly
+from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
 logger = logging.getLogger(__name__)
-
-vertexai.init(project=settings.gcp_project_id, location=settings.gcp_location, credentials=get_gcp_credentials())
 
 _CRISIS_PROMPT = """You are a safety classifier for a wellness coaching app.
 Analyze the user message and determine if it expresses suicidal ideation, self-harm intent,
@@ -24,6 +22,7 @@ Be conservative: if uncertain, set is_crisis to true."""
 
 
 async def detect_crisis(content: str) -> dict:
+    init_vertexai()
     try:
         model = GenerativeModel("gemini-2.0-flash")
         prompt = f"{_CRISIS_PROMPT}\n\nUser message: {content[:2000]}"

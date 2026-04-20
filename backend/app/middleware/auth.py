@@ -8,7 +8,7 @@ from jwt.algorithms import RSAAlgorithm
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.config import settings
+from app.config import get_settings
 
 bearer_scheme = HTTPBearer()
 
@@ -33,7 +33,7 @@ async def _get_jwks(*, force_refresh: bool = False) -> dict:
             return _jwks_cache
         async with httpx.AsyncClient() as client:
             resp = await client.get(
-                f"{settings.clerk_jwt_issuer}/.well-known/jwks.json", timeout=10
+                f"{get_settings().clerk_jwt_issuer}/.well-known/jwks.json", timeout=10
             )
             resp.raise_for_status()
             _jwks_cache = resp.json()
@@ -67,7 +67,7 @@ async def get_current_user_id(
             token,
             public_key,  # type: ignore[arg-type]
             algorithms=["RS256"],
-            issuer=settings.clerk_jwt_issuer,
+            issuer=get_settings().clerk_jwt_issuer,
         )
         user_id: str | None = payload.get("sub")
         if not user_id:

@@ -16,6 +16,7 @@ import base64
 import json
 import logging
 import os
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -55,3 +56,23 @@ def get_gcp_credentials():
     # Fall back to ADC / file path — return None so vertexai.init() uses its default chain
     _cached_credentials = None
     return None
+
+
+@lru_cache(maxsize=1)
+def init_vertexai() -> None:
+    """Initialize the VertexAI SDK once per process.
+
+    Decorated with ``@lru_cache`` so subsequent calls are no-ops.
+    Services should call this at the top of any function that uses VertexAI
+    models rather than at module import time, keeping imports side-effect-free.
+    """
+    import vertexai  # local import to avoid pulling vertexai into every module
+
+    from app.config import get_settings
+
+    cfg = get_settings()
+    vertexai.init(
+        project=cfg.gcp_project_id,
+        location=cfg.gcp_location,
+        credentials=get_gcp_credentials(),
+    )
