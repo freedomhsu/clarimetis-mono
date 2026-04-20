@@ -1,0 +1,75 @@
+# ── Python / Backend ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+backend/.venv/
+backend/venv/
+backend/env/
+backend/.env
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+*.pyc
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+# next-pwa generates these at build time — do not commit
+frontend/public/sw.js
+frontend/public/sw.js.map
+frontend/public/workbox-*.js
+frontend/public/workbox-*.js.map
+frontend/public/fallback-*.js
+frontend/public/swe-worker-*.js
+
+# ── GCP credentials (never commit service account keys) ───────────────────────
+# Match common service-account key filename patterns
+*-service-account.json
+*-key.json
+*-credentials.json
+service-account*.json
+
+# ── Environment files ─────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# Keep examples
+!.env.example
+!backend/.env.example
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# docker-compose.yaml is intentionally tracked
+
+# ── OS / IDE ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+# ── Terraform ─────────────────────────────────────────────────────
+infrastructure/terraform/.terraform/
+infrastructure/terraform/.terraform.lock.hcl
+infrastructure/terraform/terraform.tfstate
+infrastructure/terraform/terraform.tfstate.backup
+infrastructure/terraform/terraform.tfvars
+infrastructure/terraform/*.tfplan
+# env-specific tfvars contain secrets — gitignore all except *.example
+infrastructure/terraform/env/*.tfvars
+!infrastructure/terraform/env/*.tfvars.example

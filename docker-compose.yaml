@@ -1,0 +1,72 @@
+services:
+  # ── PostgreSQL with pgvector ───────────────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wellness
+      POSTGRES_PASSWORD: wellness
+      POSTGRES_DB: wellness_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Run migrations in order on first start
+      - ./backend/migrations/init.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ./backend/migrations/002_user_profiles_sentiment.sql:/docker-entrypoint-initdb.d/002_user_profiles_sentiment.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wellness -d wellness_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── FastAPI backend ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override DATABASE_URL to use Docker service name
+      DATABASE_URL: postgresql+asyncpg://wellness:wellness@db:5432/wellness_db
+      # Point google-auth at the ADC file inside the container.
+      # This is set automatically when using the gcloud ADC mount below.
+      GOOGLE_APPLICATION_CREDENTIALS: /root/.config/gcloud/application_default_credentials.json
+    ports:
+      - "8000:8080"   # Frontend api.ts defaults to localhost:8000
+    volumes:
+      - ./backend:/app
+      # Mount gcloud Application Default Credentials from host (no key file needed).
+      # One-time setup: run `gcloud auth application-default login` on your machine.
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Next.js frontend ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  frontend_node_modules:
+  frontend_next:

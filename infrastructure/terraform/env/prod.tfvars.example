@@ -1,0 +1,29 @@
+project_id  = "clarimetis-dev-01"  # update to prod project if separate
+region      = "us-central1"
+github_repo = "freedomhsu/clarimetis-mono"
+
+# ── Database ──────────────────────────────────────────────────────────────────
+database_url = "postgresql+asyncpg://user:password@host:5432/wellness_db"
+
+# ── Clerk ─────────────────────────────────────────────────────────────────────
+clerk_secret_key      = "sk_live_..."
+clerk_jwt_issuer      = "https://your-clerk-domain.clerk.accounts.dev"
+clerk_publishable_key = "pk_live_..."
+
+# ── Stripe ────────────────────────────────────────────────────────────────────
+stripe_secret_key           = "sk_live_..."
+stripe_webhook_secret       = "whsec_..."
+stripe_pro_monthly_price_id = "price_..."
+stripe_pro_annual_price_id  = "price_..."
+
+# ── GCP ───────────────────────────────────────────────────────────────────────
+gcs_bucket_name = "clarimetis-media-prod"
+
+# ── App ───────────────────────────────────────────────────────────────────────
+cors_origins = "https://clarimetis.com"
+frontend_url = "https://clarimetis.com"
+
+# ── Langfuse ──────────────────────────────────────────────────────────────────
+langfuse_public_key = ""
+langfuse_secret_key = ""
+langfuse_base_url   = "https://us.cloud.langfuse.com"
