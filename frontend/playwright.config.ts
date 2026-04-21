@@ -57,5 +57,9 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120_000,
+    // Suppress Next.js dev-server stdout (browser console messages forwarded
+    // by Next.js, e.g. repeated Clerk "development keys" warnings).
+    // Stderr (compilation errors, crash output) is still shown.
+    stdout: "ignore",
   },
 });
