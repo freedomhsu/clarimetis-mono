@@ -11,7 +11,7 @@ concurrency:
 env:
   PROJECT_ID: clarimetis-dev-01
   REGION: us-central1
-  REGISTRY: us-central1-docker.pkg.dev/clarimetis-dev-01/clarimetis
+  REGISTRY: us-central1-docker.pkg.dev/clarimetis-dev-01/clarimetis-dev-artifacts
   DEPLOY_ENV: ${{ github.ref_name == 'production' && 'production' || 'development' }}
 
 jobs:
