@@ -20,7 +20,9 @@ setup("authenticate", async ({ page }) => {
 
   await clerk.signIn({ page, signInParams: { strategy: "password", identifier: email, password } });
 
-  await page.goto("/dashboard");
+  // Clerk redirects to afterSignInUrl (/dashboard) automatically after sign-in.
+  // Don't call page.goto() here — that would trigger a fresh middleware check
+  // before the session cookie is fully committed.
   await page.waitForURL(/\/(dashboard|chat)/, { timeout: 30000 });
 
   await page.context().storageState({ path: AUTH_FILE });
