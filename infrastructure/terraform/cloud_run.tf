@@ -1,9 +1,10 @@
 # ── Backend ───────────────────────────────────────────────────────────────────
 
 resource "google_cloud_run_v2_service" "backend" {
-  name     = "clarimetis-backend"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                = "clarimetis-backend"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
 
   template {
     service_account = google_service_account.cloud_run.email
@@ -79,19 +80,22 @@ resource "google_cloud_run_v2_service" "backend" {
   }
 }
 
-resource "google_cloud_run_v2_service_iam_member" "backend_public" {
-  name     = google_cloud_run_v2_service.backend.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
+# Blocked by org policy constraints/iam.allowedPolicyMemberTypes — needs org admin to
+# run: gcloud org-policies reset constraints/iam.allowedPolicyMemberTypes --project=<id>
+# resource "google_cloud_run_v2_service_iam_member" "backend_public" {
+#   name     = google_cloud_run_v2_service.backend.name
+#   location = var.region
+#   role     = "roles/run.invoker"
+#   member   = "allUsers"
+# }
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 resource "google_cloud_run_v2_service" "frontend" {
-  name     = "clarimetis-frontend"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                = "clarimetis-frontend"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = false
 
   template {
     service_account = google_service_account.cloud_run.email
@@ -163,9 +167,9 @@ resource "google_cloud_run_v2_service" "frontend" {
   }
 }
 
-resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
-  name     = google_cloud_run_v2_service.frontend.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
+# resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
+#   name     = google_cloud_run_v2_service.frontend.name
+#   location = var.region
+#   role     = "roles/run.invoker"
+#   member   = "allUsers"
+# }
