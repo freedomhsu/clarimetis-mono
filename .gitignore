@@ -73,3 +73,6 @@ infrastructure/terraform/*.tfplan
 # env-specific tfvars contain secrets — gitignore all except *.example
 infrastructure/terraform/env/*.tfvars
 !infrastructure/terraform/env/*.tfvars.example
+
+# Playwright saved auth state — contains session cookies, never commit
+frontend/e2e/.auth/

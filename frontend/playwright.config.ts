@@ -35,8 +35,8 @@ export default defineConfig({
       name: "setup",
       testMatch: /global\.setup\.ts/,
       use: {
-        // setup runs without an existing auth state
-        storageState: undefined,
+        // setup runs with an explicitly empty context — not the global auth file
+        storageState: { cookies: [], origins: [] },
       },
     },
 

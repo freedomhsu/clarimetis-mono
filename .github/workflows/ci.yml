@@ -105,7 +105,7 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: backend
-        run: uv sync --frozen --group dev
+        run: uv sync --frozen
 
       - name: Start backend
         working-directory: backend
@@ -147,6 +147,10 @@ jobs:
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install chromium --with-deps
+
+      - name: Create e2e auth directory
+        working-directory: frontend
+        run: mkdir -p e2e/.auth
 
       - name: Run Playwright e2e
         working-directory: frontend
