@@ -20,6 +20,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: process.env.CI ? "github" : "html",
+  timeout: 60_000, // generous timeout for CI (Clerk API + Next.js startup)
 
   use: {
     baseURL: "http://localhost:3000",
