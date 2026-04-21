@@ -152,7 +152,21 @@ jobs:
         working-directory: frontend
         run: mkdir -p e2e/.auth
 
+      - name: Check e2e credentials
+        id: check-creds
+        run: |
+          if [[ -n "$TEST_USER_EMAIL" && -n "$TEST_USER_PASSWORD" ]]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::notice::TEST_USER_EMAIL or TEST_USER_PASSWORD not set in the 'development' environment — skipping Playwright e2e tests"
+          fi
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
       - name: Run Playwright e2e
+        if: steps.check-creds.outputs.available == 'true'
         working-directory: frontend
         run: npm run test:e2e
         env:
