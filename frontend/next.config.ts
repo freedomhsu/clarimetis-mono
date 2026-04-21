@@ -27,6 +27,7 @@ try {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  turbopack: {},
   transpilePackages: ["@clerk/nextjs", "@clerk/clerk-react", "@clerk/shared"],
   images: {
     remotePatterns: [

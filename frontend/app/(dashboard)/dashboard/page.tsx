@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
@@ -117,7 +117,7 @@ const highlights = [
   { icon: Clock, label: "This week", value: "—", color: "text-sky-500" },
 ];
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const firstName = user?.firstName ?? "there";
@@ -387,5 +387,13 @@ export default function DashboardPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
   );
 }

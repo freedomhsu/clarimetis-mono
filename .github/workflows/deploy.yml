@@ -76,7 +76,7 @@ jobs:
 
       - name: Deploy backend to Cloud Run
         run: |
-          gcloud run deploy clarimetis-backend \
+          gcloud run services update clarimetis-backend \
             --image="${{ env.REGISTRY }}/backend:${{ github.sha }}" \
             --region="${{ env.REGION }}" \
             --project="${{ env.PROJECT_ID }}" \
@@ -168,7 +168,7 @@ jobs:
 
       - name: Deploy frontend to Cloud Run
         run: |
-          gcloud run deploy clarimetis-frontend \
+          gcloud run services update clarimetis-frontend \
             --image="${{ env.REGISTRY }}/frontend:${{ github.sha }}" \
             --region="${{ env.REGION }}" \
             --project="${{ env.PROJECT_ID }}" \
