@@ -14,14 +14,16 @@ setup("authenticate", async ({ page }) => {
 
   await clerkSetup();
 
-  // Navigate to a public page so Clerk JS loads, then inject the testing
+  // Navigate to the sign-in page so Clerk JS loads, then inject the testing
   // token so server-side middleware trusts the programmatic session.
-  await page.goto("/");
+  await page.goto("/sign-in");
   await setupClerkTestingToken({ page });
 
   await clerk.signIn({ page, signInParams: { strategy: "password", identifier: email, password } });
 
-  await page.goto("/dashboard");
+  // clerk.signIn() internally navigates to afterSignInUrl (/dashboard).
+  // Just wait for it — don't call page.goto() which would start a fresh
+  // navigation and lose the testing token cookie.
   await page.waitForURL(/\/(dashboard|chat)/, { timeout: 30000 });
 
   await page.context().storageState({ path: AUTH_FILE });
