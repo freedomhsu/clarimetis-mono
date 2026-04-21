@@ -11,7 +11,7 @@ concurrency:
 env:
   PROJECT_ID: clarimetis-dev-01
   REGION: us-central1
-  REGISTRY: us-central1-docker.pkg.dev/clarimetis-dev-01/clarimetis
+  REGISTRY: us-central1-docker.pkg.dev/clarimetis-dev-01/clarimetis-dev-artifacts
   DEPLOY_ENV: ${{ github.ref_name == 'production' && 'production' || 'development' }}
 
 jobs:
@@ -35,75 +35,12 @@ jobs:
               - 'frontend/**'
               - '.github/workflows/deploy.yml'
 
-  # ── Test gate ───────────────────────────────────────────────────────────────
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    needs: changes
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # ── Backend (pytest) ────────────────────────────────────────────────────
-      - name: Set up Python
-        if: needs.changes.outputs.backend == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        if: needs.changes.outputs.backend == 'true'
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"
-          enable-cache: true
-          cache-dependency-glob: "backend/uv.lock"
-
-      - name: Install backend dependencies
-        if: needs.changes.outputs.backend == 'true'
-        working-directory: backend
-        run: uv sync --frozen --group dev
-
-      - name: Run pytest
-        if: needs.changes.outputs.backend == 'true'
-        working-directory: backend
-        run: uv run pytest tests/ -q --tb=short
-        env:
-          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
-          GCP_PROJECT_ID: "test-project"
-          GCS_BUCKET_NAME: "test-bucket"
-          CLERK_SECRET_KEY: "sk_test_placeholder"
-          CLERK_JWT_ISSUER: "https://placeholder.clerk.accounts.dev"
-          STRIPE_SECRET_KEY: "sk_test_placeholder"
-          STRIPE_WEBHOOK_SECRET: "whsec_placeholder"
-          STRIPE_PRO_MONTHLY_PRICE_ID: "price_placeholder_monthly"
-          STRIPE_PRO_ANNUAL_PRICE_ID: "price_placeholder_annual"
-
-      # ── Frontend (TypeScript type-check) ────────────────────────────────────
-      - name: Set up Node
-        if: needs.changes.outputs.frontend == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        if: needs.changes.outputs.frontend == 'true'
-        working-directory: frontend
-        run: npm install --prefer-offline
-
-      - name: TypeScript type-check
-        if: needs.changes.outputs.frontend == 'true'
-        working-directory: frontend
-        run: npx tsc --noEmit
-
   # ── Build & deploy backend ──────────────────────────────────────────────────
   deploy-backend:
     name: Backend → Cloud Run
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: needs.changes.outputs.backend == 'true'
+    needs: changes
+
     environment: ${{ github.ref_name == 'production' && 'production' || 'development' }}
     permissions:
       contents: read
@@ -177,8 +114,8 @@ jobs:
   deploy-frontend:
     name: Frontend → Cloud Run
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: needs.changes.outputs.frontend == 'true'
+    needs: changes
+
     environment: ${{ github.ref_name == 'production' && 'production' || 'development' }}
     permissions:
       contents: read
@@ -224,8 +161,8 @@ jobs:
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
             NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-            NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-            NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+            NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
+            NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

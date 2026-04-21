@@ -112,6 +112,7 @@ async def test_create_session_returns_201_with_session():
 
     db = AsyncMock()
     db.execute.return_value = user_result
+    db.add = MagicMock()  # AsyncSession.add() is synchronous
     db.commit = AsyncMock()
 
     # Simulate db.refresh populating the new session object

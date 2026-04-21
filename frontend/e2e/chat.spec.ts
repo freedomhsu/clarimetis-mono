@@ -6,7 +6,7 @@
  * mocks is "e2e-sess-chat".
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { API_URL, fakeSession, fakeMessage, mockChatStream } from "./helpers";
 
 const SESSION_ID = "e2e-sess-chat";
@@ -72,7 +72,7 @@ test.beforeEach(async ({ page }) => {
 test.describe("Chat flow", () => {
   test("navigates to /chat and shows the session in the sidebar", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
-    await expect(page.getByText("Chat E2E Session")).toBeVisible();
+    await expect(page.getByText("Chat E2E Session").first()).toBeVisible({ timeout: 8_000 });
   });
 
   test("shows the empty-state welcome prompt when no messages exist", async ({ page }) => {
@@ -200,10 +200,11 @@ test.describe("Chat flow", () => {
 
     const textarea = page.getByPlaceholder(/share what's on your mind/i);
 
-    // Shift+Enter should NOT send
+    // Shift+Enter should NOT send (message bubble should not appear)
     await textarea.fill("line one");
     await textarea.press("Shift+Enter");
-    await expect(page.getByText("line one")).not.toBeVisible();
+    // The text "line one" appears in the textarea (visible) but NOT as a chat bubble
+    await expect(page.locator(".message-bubble, [data-role='user']").filter({ hasText: "line one" })).not.toBeVisible();
 
     // Enter without Shift SHOULD send
     await textarea.fill("send this");

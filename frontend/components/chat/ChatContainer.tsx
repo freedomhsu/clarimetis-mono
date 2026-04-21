@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function ChatContainer({ initialSessionId }: Props) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded } = useAuth();
   const router = useRouter();
   const { tier } = useDashboard();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -59,8 +59,9 @@ export function ChatContainer({ initialSessionId }: Props) {
   }, [getToken, router]); // activeSessionId removed — accessed via ref
 
   useEffect(() => {
+    if (!isLoaded) return;
     loadSessions();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async () => {
     setActionError(null);

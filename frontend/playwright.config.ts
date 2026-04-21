@@ -1,4 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config } from "dotenv";
+
+// Load .env.local so TEST_USER_EMAIL / TEST_USER_PASSWORD are available
+// when running locally without pre-exported env vars.
+// quiet: true suppresses the dotenv v17 verbose injection log.
+config({ path: ".env.local", quiet: true });
 
 /**
  * E2E test configuration.
@@ -15,11 +21,13 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/clerk-global-setup",
   fullyParallel: false, // auth state is shared; run serially to keep DB clean
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: process.env.CI ? "github" : "html",
+  timeout: 60_000, // generous timeout for CI (Clerk API + Next.js startup)
 
   use: {
     baseURL: "http://localhost:3000",
@@ -56,5 +64,9 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120_000,
+    // Suppress Next.js dev-server output (browser console messages forwarded
+    // by Next.js, e.g. repeated Clerk "development keys" warnings).
+    stdout: "ignore",
+    stderr: "ignore",
   },
 });
