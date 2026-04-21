@@ -13,6 +13,8 @@ import { API_URL, getAuthToken, createSession, deleteSession, fakeSession } from
 // ── Full-stack (real backend) tests ───────────────────────────────────────
 
 test.describe("Session management — real API", () => {
+  test.skip(!!process.env.CI, "Requires a running backend — skipped in CI");
+
   let authToken: string;
   const createdIds: string[] = [];
 
