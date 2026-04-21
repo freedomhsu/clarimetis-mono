@@ -14,6 +14,10 @@ setup("authenticate", async ({ page }) => {
 
   await clerkSetup();
 
+  // Navigate to any Clerk-enabled page first so window.Clerk is loaded
+  // before clerk.signIn() tries to call it.
+  await page.goto("/sign-in");
+
   await clerk.signIn({ page, signInParams: { strategy: "password", identifier: email, password } });
 
   await page.goto("/dashboard");
