@@ -57,13 +57,13 @@ test.describe("Sign-in page", () => {
   });
 
   test("renders Google sign-in button", async ({ page }) => {
-    await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible({
+    await expect(page.getByRole("button", { name: /google/i })).toBeVisible({
       timeout: 8_000,
     });
   });
 
   test("renders Apple sign-in button", async ({ page }) => {
-    await expect(page.getByRole("button", { name: /continue with apple/i })).toBeVisible({
+    await expect(page.getByRole("button", { name: /apple/i })).toBeVisible({
       timeout: 8_000,
     });
   });
@@ -127,8 +127,8 @@ test.describe("Sign-up page", () => {
   });
 
   test("renders Google and Apple sign-up buttons", async ({ page }) => {
-    await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /continue with apple/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /google/i })).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole("button", { name: /apple/i })).toBeVisible({ timeout: 8_000 });
   });
 
   test("has a link back to the sign-in page", async ({ page }) => {

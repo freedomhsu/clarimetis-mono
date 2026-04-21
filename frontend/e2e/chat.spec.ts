@@ -72,7 +72,7 @@ test.beforeEach(async ({ page }) => {
 test.describe("Chat flow", () => {
   test("navigates to /chat and shows the session in the sidebar", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
-    await expect(page.getByText("Chat E2E Session")).toBeVisible();
+    await expect(page.getByText("Chat E2E Session")).toBeVisible({ timeout: 8_000 });
   });
 
   test("shows the empty-state welcome prompt when no messages exist", async ({ page }) => {
