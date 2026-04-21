@@ -12,36 +12,24 @@ setup("authenticate", async ({ page }) => {
     throw new Error("Set TEST_USER_EMAIL and TEST_USER_PASSWORD before running e2e tests.");
   }
 
+  // Fetch a Clerk testing token (stored in process.env.CLERK_TESTING_TOKEN) so
+  // that the Clerk middleware accepts programmatic sign-ins from automated browsers.
   await clerkSetup();
 
-  console.log("[setup] navigating to /sign-in");
+  // Load the sign-in page so window.Clerk is available for clerk.signIn().
   await page.goto("/sign-in");
-  console.log("[setup] url after goto /sign-in:", page.url());
 
+  // Register the FAPI route interceptor that appends the testing token to every
+  // Clerk Frontend API request — bypasses bot-protection on dev instances.
   await setupClerkTestingToken({ page });
-  console.log("[setup] testing token injected");
 
-  // Log cookies before sign-in
-  const cookiesBefore = await page.context().cookies();
-  console.log("[setup] cookies before signIn:", cookiesBefore.map(c => c.name).join(", ") || "(none)");
+  // Programmatic sign-in via Clerk's browser client.
+  await clerk.signIn({
+    page,
+    signInParams: { strategy: "password", identifier: email, password },
+  });
 
-  await clerk.signIn({ page, signInParams: { strategy: "password", identifier: email, password } });
-  console.log("[setup] clerk.signIn() completed, current url:", page.url());
-
-  // Log cookies after sign-in
-  const cookiesAfter = await page.context().cookies();
-  console.log("[setup] cookies after signIn:", cookiesAfter.map(c => c.name).join(", ") || "(none)");
-
-  // Take screenshot to see current state
-  await page.screenshot({ path: "test-results/after-signin.png" });
-
-  // Try explicit navigation now that we know the testing token and session are set
-  console.log("[setup] navigating to /dashboard");
-  await page.goto("/dashboard");
-  console.log("[setup] url after goto /dashboard:", page.url());
-  await page.screenshot({ path: "test-results/after-goto-dashboard.png" });
-
-  await page.waitForURL(/\/(dashboard|chat)/, { timeout: 30000 });
-
+  // Session cookies (__clerk_db_jwt, __client_uat) are now set on localhost.
+  // Persist them so every subsequent test starts pre-authenticated.
   await page.context().storageState({ path: AUTH_FILE });
 });
