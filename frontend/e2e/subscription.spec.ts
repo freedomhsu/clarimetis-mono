@@ -6,7 +6,7 @@
  * the optimistic message, and provides upgrade CTAs.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { API_URL, fakeSession } from "./helpers";
 
 const SESSION_ID = "e2e-sess-sub";
@@ -267,6 +267,9 @@ test.describe("Media upload — happy path", () => {
       mimeType: "image/png",
       buffer: Buffer.from("fake-png-data"),
     });
+
+    // Wait for the upload to complete (preview thumbnail appears)
+    await expect(page.locator(`img[src*="storage.example.com"]`)).toBeVisible({ timeout: 8_000 });
 
     // Type a message and send
     await page.getByPlaceholder(/share what's on your mind/i).fill("Here is my image");

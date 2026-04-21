@@ -7,7 +7,7 @@
  * without triggering real crisis detection in the backend.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { API_URL, fakeSession, fakeMessage } from "./helpers";
 
 const SESSION_ID = "e2e-sess-crisis";

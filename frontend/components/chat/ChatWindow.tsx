@@ -193,7 +193,7 @@ function UpgradeGate({
 }
 
 export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
-  const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, loadMessages, sendMessage, stopGeneration } =
+  const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration } =
     useChat(sessionId);
   const [dismissedError, setDismissedError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -301,7 +301,21 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
           onDismiss={() => setDismissedError(true)}
         />
       ) : (
-        <MessageInput onSend={sendMessage} onStop={stopGeneration} isStreaming={isLoading} disabled={false} onSubscriptionError={setSubscriptionError} />
+        <div>
+          {sendError && (
+            <div className="mx-4 mb-2 px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 flex items-center justify-between gap-3">
+              <p className="text-sm text-red-700 dark:text-red-400">{sendError}</p>
+              <button
+                onClick={() => setSendError(null)}
+                className="text-red-400 hover:text-red-600 dark:hover:text-red-200 text-lg leading-none shrink-0"
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
+            </div>
+          )}
+          <MessageInput onSend={sendMessage} onStop={stopGeneration} isStreaming={isLoading} disabled={false} onSubscriptionError={setSubscriptionError} />
+        </div>
       )}
     </div>  );
 }

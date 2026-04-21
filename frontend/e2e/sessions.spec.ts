@@ -7,7 +7,7 @@
  * across parallel runs.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { API_URL, getAuthToken, createSession, deleteSession, fakeSession } from "./helpers";
 
 // ── Full-stack (real backend) tests ───────────────────────────────────────
@@ -17,9 +17,11 @@ test.describe("Session management — real API", () => {
   const createdIds: string[] = [];
 
   test.beforeAll(async ({ browser }) => {
-    const page = await browser.newPage();
+    const context = await browser.newContext({ storageState: "e2e/.auth/user.json" });
+    const page = await context.newPage();
     authToken = await getAuthToken(page);
     await page.close();
+    await context.close();
   });
 
   test.afterAll(async ({ request }) => {
@@ -66,24 +68,25 @@ test.describe("Session management — real API", () => {
     await page.goto("/chat");
 
     // Click the session in the sidebar
-    await page.getByText(session.title).click();
+    await page.getByText(session.title).first().click();
 
     await expect(page).toHaveURL(new RegExp(session.id), { timeout: 5_000 });
   });
 
   test("deleting a session removes it from the sidebar", async ({ page, request }) => {
+    // Create session to delete first, then a decoy — the decoy is newer so it gets
+    // auto-selected when navigating to /chat, leaving our target session non-active.
     const session = await createSession(request, authToken, `Delete Test ${Date.now()}`);
-    // Don't add to createdIds — the test will delete it
+    const decoy = await createSession(request, authToken, `Decoy ${Date.now()}`);
+    createdIds.push(decoy.id); // cleanup; session will be deleted by this test
 
     await page.goto("/chat");
+    await page.waitForLoadState("networkidle");
 
-    // Hover over the session to reveal the delete button
-    const sessionItem = page.getByText(session.title);
-    await sessionItem.hover();
-    await page.getByRole("button", { name: /delete session/i }).click();
-
-    // Confirm the browser dialog
-    page.once("dialog", (dialog) => dialog.accept());
+    // decoy is active (newest), session is non-active → delete button in DOM
+    page.once("dialog", (dialog) => dialog.accept()); // register BEFORE click
+    await page.hover(`div.group:has-text("${session.title}")`);
+    await page.click(`div.group:has-text("${session.title}") button[aria-label="Delete session"]`, { force: true });
 
     // Session should be gone from the list
     await expect(page.getByText(session.title)).not.toBeVisible({ timeout: 5_000 });
@@ -104,13 +107,18 @@ test.describe("Session management — real API", () => {
     const other = await createSession(request, authToken, `Other ${Date.now()}`);
     createdIds.push(other.id);
 
-    // Select the other session to deactivate the one we want to delete
-    await page.getByText(other.title).click();
+    // Reload to get the sidebar to reflect the newly created session
+    await page.reload();
+    await page.waitForLoadState("networkidle");
 
-    // Now hover over the original session and delete it
-    await page.getByText(session.title).hover();
-    await page.getByRole("button", { name: /delete session/i }).click();
+    // Select the other session to deactivate the one we want to delete
+    await page.getByText(other.title).first().click();
+
+    // Now hover over the original session row and force-click delete
+    // Register dialog handler BEFORE click (confirm dialog is synchronous)
     page.once("dialog", (dialog) => dialog.accept());
+    await page.hover(`div.group:has-text("${session.title}")`);
+    await page.click(`div.group:has-text("${session.title}") button[aria-label="Delete session"]`, { force: true });
 
     await expect(page.getByText(session.title)).not.toBeVisible({ timeout: 5_000 });
   });

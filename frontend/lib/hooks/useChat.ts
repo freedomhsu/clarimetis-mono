@@ -12,6 +12,7 @@ export function useChat(sessionId: string) {
   const [streamingContent, setStreamingContent] = useState("");
   const [thinkingStatus, setThinkingStatus] = useState("");
   const [subscriptionError, setSubscriptionError] = useState<SubscriptionError | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Ref mirrors the accumulated streamed text so the AbortError handler can
   // read the current value without a stale closure over `streamingContent`.
@@ -54,6 +55,7 @@ export function useChat(sessionId: string) {
       setStreamingContent("");
       setThinkingStatus("");
       setSubscriptionError(null);
+      setSendError(null);
 
       try {
         const abort = new AbortController();
@@ -123,8 +125,9 @@ export function useChat(sessionId: string) {
           setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         } else {
           console.error("Chat error:", err);
-          // Re-load messages to reconcile state with server
-          await loadMessages();
+          // Roll back the optimistic message and show an error banner
+          setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+          setSendError("Something went wrong. Please try again.");
         }
       } finally {
         setIsLoading(false);
@@ -133,5 +136,5 @@ export function useChat(sessionId: string) {
     [getToken, sessionId, loadMessages]
   );
 
-  return { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, loadMessages, sendMessage, stopGeneration };
+  return { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration };
 }

@@ -50,6 +50,11 @@ export function fakeMessage(overrides: Record<string, unknown> = {}) {
  */
 export async function getAuthToken(page: Page): Promise<string> {
   await page.goto("/chat", { waitUntil: "domcontentloaded" });
+  // Wait for Clerk to initialize and set a session
+  await page.waitForFunction(
+    () => window.Clerk?.session != null,
+    { timeout: 15_000 }
+  );
   const token = await page.evaluate(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (window as any).Clerk?.session?.getToken() as Promise<string>;

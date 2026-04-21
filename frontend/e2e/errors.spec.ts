@@ -8,7 +8,7 @@
  * All tests use route mocks — no live backend required.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { API_URL, fakeSession, fakeMessage } from "./helpers";
 
 const SESSION_ID = "e2e-sess-errors";
@@ -63,7 +63,7 @@ test.describe("500 error on send", () => {
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
-      page.getByText(/error|failed|try again|something went wrong/i),
+      page.getByText(/something went wrong. please try again/i),
     ).toBeVisible({ timeout: 8_000 });
   });
 
@@ -73,7 +73,7 @@ test.describe("500 error on send", () => {
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
-      page.getByText(/error|failed|try again|something went wrong/i),
+      page.getByText(/something went wrong. please try again/i),
     ).toBeVisible({ timeout: 8_000 });
 
     await expect(page.getByText("this should be rolled back")).not.toBeVisible();
@@ -85,11 +85,13 @@ test.describe("500 error on send", () => {
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
-      page.getByText(/error|failed|try again|something went wrong/i),
+      page.getByText(/something went wrong. please try again/i),
     ).toBeVisible({ timeout: 8_000 });
 
     // After error, the input and Send button should be interactive again
     await expect(page.getByPlaceholder(/share what's on your mind/i)).toBeEnabled();
+    // Re-fill input to verify send button becomes enabled again
+    await page.getByPlaceholder(/share what's on your mind/i).fill("retry");
     await expect(page.getByRole("button", { name: /send/i })).toBeEnabled();
   });
 });
@@ -114,7 +116,7 @@ test.describe("Network failure on send", () => {
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
-      page.getByText(/error|failed|try again|something went wrong/i),
+      page.getByText(/something went wrong. please try again/i),
     ).toBeVisible({ timeout: 8_000 });
   });
 });
@@ -141,8 +143,12 @@ test.describe("401 unauthorized on send", () => {
     await page.getByPlaceholder(/share what's on your mind/i).fill("auth test");
     await page.getByRole("button", { name: /send/i }).click();
 
-    // The page must not white-screen. Either an error message or a redirect to sign-in.
-    const hasError = await page.getByText(/error|failed|sign in|unauthorized/i).isVisible();
+    // Wait for error message or redirect to sign-in
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Something went wrong") || window.location.pathname.includes("sign-in"),
+      { timeout: 8_000 }
+    );
+    const hasError = await page.getByText(/something went wrong/i).isVisible();
     const redirectedToSignIn = page.url().includes("sign-in");
     expect(hasError || redirectedToSignIn).toBe(true);
   });
