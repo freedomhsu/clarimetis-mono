@@ -94,7 +94,7 @@ export default function DashboardSidebar() {
           </div>
           <div>
             <p className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight">ClariMetis</p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">AI Wellness Coach</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">AI Life Coach</p>
           </div>
         </div>
       </div>

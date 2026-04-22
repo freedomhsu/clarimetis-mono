@@ -179,7 +179,7 @@ function UpgradeGate({
             {billingLoading === "annual" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <span className="font-bold">$99/yr</span>
+              <span className="font-bold">$99.99/yr</span>
             )}
           </span>
         </button>

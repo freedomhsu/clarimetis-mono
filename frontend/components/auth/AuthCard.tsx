@@ -28,7 +28,7 @@ export function AuthCard({ title, subtitle, children }: AuthCardProps) {
       </div>
 
       <p className="text-center text-xs text-gray-600 mt-5">
-        ClariMetis &middot; AI Wellness Coach
+        ClariMetis &middot; AI Life Coach
       </p>
     </div>
   );

@@ -14,8 +14,20 @@ resource "google_cloud_run_v2_service" "backend" {
       max_instance_count = 10
     }
 
+    volumes {
+      name = "cloudsql"
+      cloud_sql_instance {
+        instances = [google_sql_database_instance.main.connection_name]
+      }
+    }
+
     containers {
       image = var.backend_image
+
+      volume_mounts {
+        name       = "cloudsql"
+        mount_path = "/cloudsql"
+      }
 
       ports {
         container_port = 8080
@@ -72,6 +84,8 @@ resource "google_cloud_run_v2_service" "backend" {
   depends_on = [
     google_secret_manager_secret_version.app,
     google_project_iam_member.cloud_run_secret_accessor,
+    google_project_iam_member.cloud_run_cloudsql,
+    google_sql_database_instance.main,
   ]
 
   # CI/CD updates the image via `gcloud run deploy`; Terraform manages everything else.

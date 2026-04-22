@@ -68,7 +68,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Wellness Coach API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Life Coach API", version="0.1.0", lifespan=lifespan)
 
 # Expose the limiter on app.state so @limiter.limit decorators can find it
 app.state.limiter = limiter
