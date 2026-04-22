@@ -10,6 +10,24 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "environment" {
+  description = "Environment name (dev, prod) — used in resource names"
+  type        = string
+  default     = "dev"
+}
+
+variable "cloudsql_tier" {
+  description = "Cloud SQL machine tier"
+  type        = string
+  default     = "db-f1-micro"
+}
+
+variable "db_password" {
+  description = "Password for the Cloud SQL wellness user"
+  type        = string
+  sensitive   = true
+}
+
 variable "github_repo" {
   description = "GitHub repository in 'owner/repo' format (used to scope WIF)"
   type        = string

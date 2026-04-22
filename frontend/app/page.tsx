@@ -108,7 +108,7 @@ const tiers = [
   },
   {
     name: "Pro Annual",
-    price: "$99",
+    price: "$99.99",
     period: "/ yr",
     description: "2 months free vs. monthly.",
     cta: "Start Annual",
@@ -153,7 +153,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
         <div className="inline-block mb-4 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-semibold tracking-wide uppercase">
-          AI Wellness Coach
+          AI Life Coach
         </div>
         <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight leading-tight mb-6">
           Clarity starts with{" "}
@@ -285,7 +285,7 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="border-t border-gray-100 dark:border-gray-800 py-10 text-center text-xs text-gray-400 dark:text-gray-500 px-6">
         <p className="italic mb-1">
-          ClariMetis is an AI wellness coaching companion, not a licensed therapist or medical
+          ClariMetis is an AI life coaching companion, not a licensed therapist or medical
           professional.
         </p>
         <p>

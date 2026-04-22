@@ -353,7 +353,7 @@ function DashboardContent() {
                     {planLoading === "annual" ? (
                       <Loader2 size={14} className="animate-spin" />
                     ) : (
-                      <span className="font-bold">$99/yr</span>
+                      <span className="font-bold">$99.99/yr</span>
                     )}
                   </span>
                 </button>
@@ -379,7 +379,7 @@ function DashboardContent() {
         <div className="flex gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
           <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
-            <strong>Reminder:</strong> ClariMetis is an AI wellness coaching companion, not a
+            <strong>Reminder:</strong> ClariMetis is an AI life coaching companion, not a
             licensed therapist or medical professional. If you are in crisis, call or text{" "}
             <strong>988</strong> (US — Suicide &amp; Crisis Lifeline).
           </p>
