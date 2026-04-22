@@ -1,7 +1,7 @@
 {
   "name": "ClariMetis",
   "short_name": "ClariMetis",
-  "description": "Your personal AI wellness and life coaching companion",
+  "description": "Your personal AI life coaching companion",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#030712",

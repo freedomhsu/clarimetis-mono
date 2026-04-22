@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/sso-callback(.*)",
   "/terms(.*)",
   "/privacy(.*)",
+  "/manifest.json",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -19,7 +20,7 @@ export default clerkMiddleware(async (auth, req) => {
 export const config = {
   matcher: [
     // Skip Next.js internals and static files
-    "/((?!_next|\.well-known|[^?]*\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!_next|\.well-known|[^?]*\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|json)).*)",
     // Always run for API routes
     "/(api|trpc)(.*)",
   ],
