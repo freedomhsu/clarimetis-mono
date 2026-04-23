@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://storage.googleapis.com https://img.clerk.com",
               "font-src 'self' data:",
-              `connect-src 'self' ${apiOrigin} https://*.clerk.accounts.dev wss://*.clerk.accounts.dev`,
+              `connect-src 'self' ${apiOrigin} https://*.clerk.accounts.dev wss://*.clerk.accounts.dev https://clerk-telemetry.com`,
               "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
               "media-src 'self' blob:",
               "worker-src 'self' blob:",
