@@ -45,7 +45,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <PWAInstallBanner />
           <script
             dangerouslySetInnerHTML={{
-              __html: `if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }`,
+              __html: `
+                if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+                window.__pwaInstallPrompt = null;
+                window.addEventListener('beforeinstallprompt', function(e) {
+                  e.preventDefault();
+                  window.__pwaInstallPrompt = e;
+                  window.dispatchEvent(new Event('pwaInstallReady'));
+                  console.log('[PWA] beforeinstallprompt captured at', Date.now());
+                });
+                window.addEventListener('appinstalled', function() {
+                  console.log('[PWA] app installed');
+                });
+                console.log('[PWA] listeners registered at', Date.now());
+              `,
             }}
           />
         </body>
