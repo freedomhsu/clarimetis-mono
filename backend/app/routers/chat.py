@@ -17,6 +17,8 @@ from app.middleware.subscription import check_message_quota, get_current_user
 from app.services.crisis_detection import detect_crisis
 from app.services.embeddings import embed_text
 from app.services.gateway import classify_intent, get_system_prompt
+from app.services.guardrails import check_input, check_output
+from app.services.evaluation import evaluate_exchange
 from app.services.gemini import generate_session_summary, generate_session_title, stream_chat_response
 from app.services.profile import refresh_user_profile
 from app.services.rag import get_relevant_context, get_tier1_context, get_user_profile_context, store_message_embedding
@@ -154,13 +156,36 @@ async def send_message(
     #   b) crisis / intent results are ready before any bytes are sent.
     # detect_crisis and classify_intent are pure LLM calls (no DB) — safe to gather.
     # get_user_profile_context uses the same DB session so must run separately.
-    crisis_result, intent = await asyncio.gather(
+    crisis_result, intent, guardrail_result = await asyncio.gather(
         detect_crisis(body.content),
         classify_intent(body.content),
+        check_input(body.content),
     )
     profile_context = await get_user_profile_context(db, user.id)
     is_crisis = crisis_result.get("is_crisis", False)
     system_prompt = get_system_prompt(intent)
+
+    # Input guardrail: if the message is out of scope, return the redirect response
+    # directly without calling the main LLM — but still persist the user message.
+    if not guardrail_result["safe"] and guardrail_result.get("redirect"):
+        user_msg = Message(
+            session_id=session.id,
+            role="user",
+            content=body.content,
+            media_urls=body.media_urls,
+            crisis_flagged=False,
+        )
+        db.add(user_msg)
+        await db.commit()
+        redirect_text = guardrail_result["redirect"]
+
+        async def _redirect_stream() -> AsyncGenerator[str, None]:
+            yield redirect_text
+            background_tasks.add_task(
+                _save_assistant_message, session.id, redirect_text, False
+            )
+
+        return StreamingResponse(_redirect_stream(), media_type="text/plain; charset=utf-8")
 
     # Persist the user message NOW — before the StreamingResponse is returned.
     user_msg = Message(
@@ -220,10 +245,13 @@ async def send_message(
             accumulated.append(chunk)
             yield chunk
 
+        full_response = "".join(accumulated)
         background_tasks.add_task(
-            _save_assistant_message, session.id, "".join(accumulated), is_crisis
+            _save_assistant_message, session.id, full_response, is_crisis
         )
         background_tasks.add_task(refresh_user_profile, user.id)
         background_tasks.add_task(_update_session_summary, session.id)
+        background_tasks.add_task(check_output, full_response, str(session.id))
+        background_tasks.add_task(evaluate_exchange, body.content, full_response, str(session.id))
 
     return StreamingResponse(generate(), media_type="text/plain; charset=utf-8")

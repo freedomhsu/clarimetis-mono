@@ -54,7 +54,7 @@ async def stream_chat_response(
     init_vertexai()
     logger.info("[Langfuse] trace: stream_chat_response started")
     effective_prompt = system_prompt or _DEFAULT_SYSTEM_PROMPT
-    model = GenerativeModel("gemini-2.5-pro", system_instruction=effective_prompt)
+    model = GenerativeModel(get_settings().gemini_pro_model, system_instruction=effective_prompt)
 
     prefix_parts: list[str] = []
     if profile_context:
@@ -114,7 +114,7 @@ async def generate_session_title(first_message: str) -> str:
     init_vertexai()
     logger.info("[Langfuse] trace: generate_session_title started")
     try:
-        model = GenerativeModel("gemini-2.0-flash")
+        model = GenerativeModel(get_settings().gemini_flash_model)
         prompt = (
             "Generate a concise 4-6 word title for a wellness coaching session that begins with "
             f"this message. Return only the title, no quotes or punctuation:\n\n{first_message[:500]}"
@@ -138,7 +138,7 @@ async def generate_session_summary(messages: list[dict]) -> str:
     """Produce a 1-2 sentence summary of a session for storage and future RAG context."""
     init_vertexai()
     try:
-        model = GenerativeModel("gemini-2.0-flash")
+        model = GenerativeModel(get_settings().gemini_flash_model)
         history_text = "\n".join(
             f"{m['role'].upper()}: {m['content'][:300]}"
             for m in messages[-20:]
@@ -162,7 +162,7 @@ async def generate_session_summary(messages: list[dict]) -> str:
 async def generate_analytics(conversation_snippets: list[str]) -> dict:
     init_vertexai()
     logger.info("[Langfuse] trace: generate_analytics started (snippets=%d)", len(conversation_snippets))
-    model = GenerativeModel("gemini-2.5-pro")
+    model = GenerativeModel(get_settings().gemini_pro_model)
     content = "\n---\n".join(conversation_snippets[:50])
 
     prompt = f"""You are ClariMetis, a systems-thinking intelligence engine performing a deep diagnostic on a user's psychological operating system based on their coaching session messages.

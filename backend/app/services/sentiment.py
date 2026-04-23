@@ -13,7 +13,7 @@ import json
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-from app.config import get_settings  # noqa: F401
+from app.config import get_settings
 from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
@@ -30,7 +30,7 @@ async def score_sentiment(text: str) -> float:
     Falls back to 0.0 (neutral) on any error so callers are never blocked.
     """
     init_vertexai()
-    model = GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel(get_settings().gemini_flash_model)
     prompt = f"{_SENTIMENT_PROMPT}\n\nUser message: {text[:2000]}"
 
     try:
