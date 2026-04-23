@@ -72,7 +72,7 @@ jobs:
             ${{ env.REGISTRY }}/backend:${{ github.sha }}
             ${{ env.REGISTRY }}/backend:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min
 
       - name: Deploy backend to Cloud Run
         run: |
@@ -136,7 +136,7 @@ jobs:
             NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
             NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min
 
       - name: Deploy frontend to Cloud Run
         run: |
