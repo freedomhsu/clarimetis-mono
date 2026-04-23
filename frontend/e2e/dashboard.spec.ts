@@ -108,14 +108,18 @@ test.describe("Dashboard page", () => {
 
   test("navigates to /chat when the Start a session card is clicked", async ({ page }) => {
     await page.goto("/dashboard");
+    // Wait for auth-dependent content to confirm Clerk session is fully resolved
+    await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
     await page.getByRole("link", { name: /start.*session|new session|chat/i }).first().click();
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/chat/, { timeout: 8_000 });
   });
 
   test("navigates to /insights when the Insights link is clicked", async ({ page }) => {
     await page.goto("/dashboard");
+    // Wait for auth-dependent content to confirm Clerk session is fully resolved
+    await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
     await page.getByRole("link", { name: /insights/i }).first().click();
-    await expect(page).toHaveURL(/\/insights/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/insights/, { timeout: 8_000 });
   });
 
   test("shows an error state when /users/me returns 500", async ({ page }) => {
@@ -192,8 +196,11 @@ test.describe("Insights page", () => {
     });
 
     await page.goto("/insights");
-    await expect(page.getByText("12")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("84")).toBeVisible({ timeout: 10_000 });
+    // Scope to stat cards to avoid matching timestamps (e.g. "12:39:21 PM" also contains "12")
+    const sessionsCard = page.locator("div", { has: page.getByText("Coaching sessions") });
+    await expect(sessionsCard.getByText("12")).toBeVisible({ timeout: 10_000 });
+    const messagesCard = page.locator("div", { has: page.getByText("Messages analysed") });
+    await expect(messagesCard.getByText("84")).toBeVisible({ timeout: 10_000 });
   });
 
   test("renders the top themes chips", async ({ page }) => {
