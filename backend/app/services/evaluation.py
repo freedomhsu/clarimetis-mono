@@ -1,6 +1,7 @@
 """
 Evaluation agent — scores completed coaching exchanges against quality rubrics
-and pushes results to Langfuse as scores for dashboarding.
+and persists results to Cloud SQL. Optionally forwards scores to Langfuse if
+keys are configured.
 
 Runs as a background task after every assistant message so it never blocks
 the chat stream. All errors are swallowed so a failed evaluation never
@@ -10,10 +11,13 @@ affects the user experience.
 import asyncio
 import json
 import logging
+import uuid
 
 from vertexai.generative_models import GenerativeModel
 
 from app.config import get_settings
+from app.database import AsyncSessionLocal
+from app.models.evaluation_score import EvaluationScore
 from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
@@ -59,23 +63,19 @@ async def evaluate_exchange(
     trace_id: str | None = None,
 ) -> dict:
     """
-    Evaluate a single coaching exchange and send scores to Langfuse.
+    Evaluate a single coaching exchange, persist scores to Cloud SQL, and
+    optionally forward to Langfuse if configured.
 
     Args:
         user_message: The user's input message.
         assistant_response: The AI coach's response.
-        session_id: Used as the Langfuse trace name / identifier.
-        trace_id: Optional Langfuse trace ID to attach scores to.
+        session_id: UUID string of the chat session.
+        trace_id: Optional Langfuse trace ID for cross-referencing.
 
     Returns the raw evaluation dict (or empty dict on failure).
     Always swallows exceptions.
     """
     settings = get_settings()
-
-    # Skip if Langfuse not configured — scores have nowhere to go
-    if not settings.langfuse_public_key or not settings.langfuse_secret_key:
-        logger.debug("evaluation_agent: Langfuse not configured, skipping evaluation")
-        return {}
 
     init_vertexai()
     try:
@@ -93,8 +93,12 @@ async def evaluate_exchange(
         raw = strip_markdown_json(raw_result.text.strip())
         scores = json.loads(raw)
 
-        # Push scores to Langfuse
-        _send_to_langfuse(scores, session_id, trace_id, settings)
+        # Primary sink: Cloud SQL
+        await _save_to_db(scores, session_id, trace_id)
+
+        # Secondary sink: Langfuse (optional — skipped if keys not configured)
+        if settings.langfuse_public_key and settings.langfuse_secret_key:
+            await asyncio.to_thread(_send_to_langfuse, scores, session_id, trace_id, settings)
 
         logger.info(
             "evaluation_agent: session=%s overall=%.2f notes=%s",
@@ -107,6 +111,27 @@ async def evaluate_exchange(
     except Exception as exc:
         logger.warning("evaluation_agent: evaluation failed — skipping: %s", exc)
         return {}
+
+
+async def _save_to_db(scores: dict, session_id: str, trace_id: str | None) -> None:
+    """Persist evaluation scores to Cloud SQL."""
+    try:
+        async with AsyncSessionLocal() as db:
+            row = EvaluationScore(
+                session_id=uuid.UUID(session_id),
+                trace_id=trace_id,
+                empathy=scores.get("empathy"),
+                coaching_quality=scores.get("coaching_quality"),
+                safety=scores.get("safety"),
+                actionability=scores.get("actionability"),
+                boundary_adherence=scores.get("boundary_adherence"),
+                overall=scores.get("overall"),
+                notes=scores.get("notes"),
+            )
+            db.add(row)
+            await db.commit()
+    except Exception as exc:
+        logger.warning("evaluation_agent: DB write failed — skipping: %s", exc)
 
 
 def _send_to_langfuse(

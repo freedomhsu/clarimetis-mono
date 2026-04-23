@@ -92,3 +92,23 @@ CREATE TABLE IF NOT EXISTS score_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_score_snapshots_user_id   ON score_snapshots(user_id);
 CREATE INDEX IF NOT EXISTS idx_score_snapshots_created_at ON score_snapshots(created_at);
+
+-- ──────────────────────────────────────────────
+-- Evaluation scores  (one row per assistant message, from evaluation agent)
+-- ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS evaluation_scores (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id          UUID        NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    trace_id            TEXT,
+    empathy             REAL,
+    coaching_quality    REAL,
+    safety              REAL,
+    actionability       REAL,
+    boundary_adherence  REAL,
+    overall             REAL,
+    notes               TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_evaluation_scores_session_id ON evaluation_scores(session_id);
+CREATE INDEX IF NOT EXISTS idx_evaluation_scores_created_at ON evaluation_scores(created_at);
