@@ -41,13 +41,20 @@ export function PWAInstallBanner() {
       return;
     }
 
-    // Chrome / Edge / Android — listen for the native install prompt
-    function handleInstallPrompt(e: Event) {
-      e.preventDefault();
-      setNativePrompt(e as BeforeInstallPromptEvent);
+    // Chrome / Edge / Android:
+    // The inline script in layout.tsx captures beforeinstallprompt before React
+    // hydrates (race condition fix) and stores it on window.__pwaInstallPrompt.
+    // Check if it already fired, otherwise wait for the custom pwaInstallReady event.
+    const w = window as Window & { __pwaInstallPrompt?: BeforeInstallPromptEvent | null };
+    if (w.__pwaInstallPrompt) {
+      setNativePrompt(w.__pwaInstallPrompt);
+      return;
     }
-    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+    function handleReady() {
+      if (w.__pwaInstallPrompt) setNativePrompt(w.__pwaInstallPrompt);
+    }
+    window.addEventListener("pwaInstallReady", handleReady);
+    return () => window.removeEventListener("pwaInstallReady", handleReady);
   }, []);
 
   function dismiss() {
