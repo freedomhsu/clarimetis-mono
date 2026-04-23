@@ -1,4 +1,4 @@
-const CACHE_NAME = "clarimetis-v3";
+const CACHE_NAME = "clarimetis-v4";
 const STATIC_ASSETS = ["/", "/dashboard", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
