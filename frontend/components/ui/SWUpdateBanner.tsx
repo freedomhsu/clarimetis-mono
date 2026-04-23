@@ -32,15 +32,15 @@ export function SWUpdateBanner() {
   return (
     <div
       role="alert"
-      className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-between gap-3 px-4 py-3 bg-sky-600 text-white text-sm shadow-lg"
+      className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-between gap-4 px-5 py-4 bg-sky-600 text-white shadow-lg"
       style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}
     >
-      <span className="font-medium">A new version is available.</span>
+      <span className="font-semibold text-base">New version available</span>
       <button
         onClick={handleUpdate}
-        className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg bg-white text-sky-700 font-semibold text-xs hover:bg-sky-50 transition-colors"
+        className="flex items-center gap-2 shrink-0 px-5 py-2.5 rounded-xl bg-white text-sky-700 font-bold text-sm hover:bg-sky-50 active:bg-sky-100 transition-colors"
       >
-        <RefreshCw size={12} />
+        <RefreshCw size={14} />
         Update now
       </button>
     </div>
