@@ -65,12 +65,13 @@ export function PWAInstallBanner() {
     if (outcome === "accepted") setNativePrompt(null);
   }
 
-  if (dismissed || (!iosPrompt && !nativePrompt)) return null;
+  if (dismissed || (!iosPrompt && !nativePrompt)) { console.log("[PWA banner] returning null, dismissed=", dismissed, "iosPrompt=", iosPrompt, "nativePrompt=", nativePrompt); return null; }
+  console.log("[PWA banner] RENDERING banner");
 
   return (
     <div
       role="banner"
-      className="fixed bottom-0 inset-x-0 z-50 px-4 pb-safe-area-inset-bottom"
+      className="fixed bottom-0 inset-x-0 z-[9999] px-4"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
     >
       <div className="max-w-lg mx-auto bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl shadow-black/50 p-4 flex items-start gap-3">
