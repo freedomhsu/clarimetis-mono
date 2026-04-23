@@ -128,7 +128,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {/* Nav */}
-      <header className="sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm safe-pt">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="font-bold text-brand-600 dark:text-brand-400 text-lg tracking-tight">
             ClariMetis
