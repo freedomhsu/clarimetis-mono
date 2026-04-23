@@ -1,11 +1,18 @@
-const CACHE_NAME = "clarimetis-v2";
+const CACHE_NAME = "clarimetis-v3";
 const STATIC_ASSETS = ["/", "/dashboard", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
+  // Do NOT call skipWaiting() here — we wait for the user to confirm the update.
+});
+
+// The page sends this message when the user taps "Update now".
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
