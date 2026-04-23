@@ -1,19 +1,4 @@
 import type { NextConfig } from "next";
-import withPWAInit from "@ducanh2912/next-pwa";
-
-const withPWA = withPWAInit({
-  dest: "public",
-  // Disable in development so hot-reload isn't intercepted by the SW
-  disable: process.env.NODE_ENV === "development",
-  // Cache pages and API responses for offline support
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
-  // Workbox config
-  workboxOptions: {
-    disableDevLogs: true,
-  },
-});
 
 // Derive the API origin at build/start time so the CSP allows cross-origin
 // requests to the backend (e.g. Cloud Run in production).
@@ -82,4 +67,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;

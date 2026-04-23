@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "ClariMetis",
-  description: "Your personal AI wellness and life coaching companion",
+  description: "Your personal AI life coaching companion",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -43,6 +43,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className={`${inter.className} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 antialiased`}>
           {children}
           <PWAInstallBanner />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }`,
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>

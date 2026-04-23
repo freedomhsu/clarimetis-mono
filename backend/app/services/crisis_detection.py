@@ -5,7 +5,7 @@ import logging
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-from app.config import get_settings  # noqa: F401 — imported so get_settings() resolves correctly
+from app.config import get_settings
 from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
@@ -24,7 +24,7 @@ Be conservative: if uncertain, set is_crisis to true."""
 async def detect_crisis(content: str) -> dict:
     init_vertexai()
     try:
-        model = GenerativeModel("gemini-2.0-flash")
+        model = GenerativeModel(get_settings().gemini_flash_model)
         prompt = f"{_CRISIS_PROMPT}\n\nUser message: {content[:2000]}"
 
         response = await asyncio.wait_for(

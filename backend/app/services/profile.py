@@ -24,7 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from vertexai.generative_models import GenerativeModel
 
-from app.config import get_settings  # noqa: F401
+from app.config import get_settings
 from app.database import AsyncSessionLocal
 from app.models.message import Message
 from app.models.session import ChatSession
@@ -68,7 +68,7 @@ async def _extract_profile_fields(messages: list[str]) -> dict:
             "identity_facts": [],
         }
 
-    model = GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel(get_settings().gemini_flash_model)
     combined = "\n---\n".join(messages[:_PROFILE_SAMPLE_SIZE])
     prompt = f"{_PROFILE_PROMPT}\n\nUser messages:\n{combined[:12000]}"
 

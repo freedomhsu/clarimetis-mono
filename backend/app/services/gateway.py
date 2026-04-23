@@ -18,7 +18,7 @@ import json
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-from app.config import get_settings  # noqa: F401
+from app.config import get_settings
 from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
@@ -123,7 +123,7 @@ async def classify_intent(message: str) -> str:
     Returns one of the INTENT_* constants. Defaults to INTENT_WELLNESS_COACH
     on any classification error so the chat never breaks.
     """
-    model = GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel(get_settings().gemini_flash_model)
     prompt = f"{_CLASSIFIER_PROMPT}\n\nUser message: {message[:1000]}"
 
     try:
