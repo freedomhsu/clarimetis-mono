@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "black",
     title: "ClariMetis",
     startupImage: "/icons/icon-512.png",
   },
