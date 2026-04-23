@@ -27,30 +27,24 @@ export function PWAInstallBanner() {
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone === true);
-    if (isStandalone) return;
+    if (isStandalone) { console.log("[PWA banner] skipped: already standalone"); return; }
 
-    // Don't show if user already dismissed this session
-    if (sessionStorage.getItem("pwa-banner-dismissed")) return;
+    if (sessionStorage.getItem("pwa-banner-dismissed")) { console.log("[PWA banner] skipped: dismissed"); return; }
 
-    // iOS detection
     const isIos =
       /iphone|ipad|ipod/i.test(navigator.userAgent) &&
-      !/crios|fxios/i.test(navigator.userAgent); // exclude Chrome/Firefox on iOS
-    if (isIos) {
-      setIosPrompt(true);
-      return;
-    }
+      !/crios|fxios/i.test(navigator.userAgent);
+    if (isIos) { console.log("[PWA banner] iOS prompt shown"); setIosPrompt(true); return; }
 
-    // Chrome / Edge / Android:
-    // The inline script in layout.tsx captures beforeinstallprompt before React
-    // hydrates (race condition fix) and stores it on window.__pwaInstallPrompt.
-    // Check if it already fired, otherwise wait for the custom pwaInstallReady event.
     const w = window as Window & { __pwaInstallPrompt?: BeforeInstallPromptEvent | null };
+    console.log("[PWA banner] __pwaInstallPrompt =", w.__pwaInstallPrompt);
     if (w.__pwaInstallPrompt) {
       setNativePrompt(w.__pwaInstallPrompt);
+      console.log("[PWA banner] native prompt set from window");
       return;
     }
     function handleReady() {
+      console.log("[PWA banner] pwaInstallReady event received, prompt =", w.__pwaInstallPrompt);
       if (w.__pwaInstallPrompt) setNativePrompt(w.__pwaInstallPrompt);
     }
     window.addEventListener("pwaInstallReady", handleReady);
