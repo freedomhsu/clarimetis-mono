@@ -26,8 +26,8 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/.pnpm-debug.log*
-# next-pwa generates these at build time — do not commit
-frontend/public/sw.js
+# next-pwa generated artifacts — do not commit (next-pwa has been removed)
+# sw.js is now a manually maintained file and IS committed
 frontend/public/sw.js.map
 frontend/public/workbox-*.js
 frontend/public/workbox-*.js.map
