@@ -29,6 +29,9 @@ frontend/.pnpm-debug.log*
 # next-pwa generated artifacts — do not commit (next-pwa has been removed)
 # sw.js is now a manually maintained file and IS committed
 frontend/public/sw.js.map
+# PWA icon source files — only generated sizes are committed
+frontend/public/icons/*.webp
+frontend/public/icons/icon-source-*.png
 frontend/public/workbox-*.js
 frontend/public/workbox-*.js.map
 frontend/public/fallback-*.js
