@@ -130,6 +130,10 @@ export function SignInForm() {
   }
 
   return (
+    <AuthCard
+      title="Welcome back"
+      subtitle="Sign in to your ClariMetis account"
+    >
       {/* Social */}
       <div className="grid grid-cols-2 gap-2">
         <button
