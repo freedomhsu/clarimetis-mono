@@ -13,7 +13,14 @@
 
 import { type Page, type APIRequestContext } from "@playwright/test";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Glob prefix for page.route() mock patterns — matches any origin, so patterns
+// like `${API_URL}/api/v1/sessions` work whether the browser calls the backend
+// directly or through the Next.js /api/proxy route handler.
+export const API_URL = "**";
+
+// Real backend URL for Playwright APIRequestContext calls (createSession etc.)
+// that bypass the browser and hit the backend directly.
+const _BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ── Shared model factories ────────────────────────────────────────────────
 
@@ -74,7 +81,7 @@ export async function createSession(
   token: string,
   title = `E2E ${Date.now()}`,
 ) {
-  const res = await request.post(`${API_URL}/api/v1/sessions`, {
+  const res = await request.post(`${_BACKEND_URL}/api/v1/sessions`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { title },
   });
@@ -90,7 +97,7 @@ export async function deleteSession(
   token: string,
   sessionId: string,
 ) {
-  await request.delete(`${API_URL}/api/v1/sessions/${sessionId}`, {
+  await request.delete(`${_BACKEND_URL}/api/v1/sessions/${sessionId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
