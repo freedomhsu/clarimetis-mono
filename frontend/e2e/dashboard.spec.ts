@@ -343,4 +343,45 @@ test.describe("Dashboard tier UI", () => {
     await expect(page.getByText(/you're now on pro/i)).toBeVisible({ timeout: 8_000 });
     await expect(page).not.toHaveURL(/upgrade=success/);
   });
+
+  test(
+    "sidebar upgrades from 'Upgrade to Pro' to 'Pro plan · Unlimited' once polling picks up the webhook",
+    async ({ page }) => {
+      // Simulate Stripe webhook latency: first call returns "free", subsequent calls return "pro".
+      let callCount = 0;
+      await page.route(`${API_URL}/api/v1/users/sync`, (route) =>
+        route.fulfill({ status: 200, body: "{}" }),
+      );
+      await page.route(`${API_URL}/api/v1/users/me`, (route) => {
+        callCount++;
+        const tier = callCount === 1 ? "free" : "pro";
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ...fakeUser, subscription_tier: tier }),
+        });
+      });
+      await page.route(`${API_URL}/api/v1/sessions`, (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+      );
+      await page.route(`${API_URL}/api/v1/analytics/summary`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(fakeAnalytics),
+        }),
+      );
+
+      await page.goto("/dashboard?upgrade=success");
+
+      // Initially the DB hasn't been updated yet — banner is shown but sidebar may
+      // still say "free". After polling the second call returns "pro".
+      await expect(page.getByText(/you're now on pro/i)).toBeVisible({ timeout: 8_000 });
+
+      // Polling should flip the sidebar to "Pro plan · Unlimited" without a page reload.
+      await expect(page.getByText(/pro plan.*unlimited/i)).toBeVisible({ timeout: 10_000 });
+      // And the upgrade CTA should disappear.
+      await expect(page.getByText(/upgrade to pro/i)).not.toBeVisible();
+    },
+  );
 });

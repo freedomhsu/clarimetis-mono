@@ -35,7 +35,29 @@ async def handle_stripe_webhook(
     obj = event["data"]["object"]
 
     try:
-        if event_type in ("customer.subscription.created", "customer.subscription.updated"):
+        if event_type == "checkout.session.completed":
+            # Immediately mark the user as Pro when checkout succeeds.
+            # This fires before customer.subscription.created and avoids
+            # the frontend polling window being too narrow.
+            if obj.get("mode") == "subscription" and obj.get("payment_status") == "paid":
+                customer_id = obj.get("customer")
+                if customer_id:
+                    result = await db.execute(
+                        select(User).where(User.stripe_customer_id == customer_id)
+                    )
+                    user = result.scalar_one_or_none()
+                    if user:
+                        user.subscription_tier = "pro"
+                        if obj.get("subscription"):
+                            user.stripe_subscription_id = obj["subscription"]
+                        await db.commit()
+                    else:
+                        logger.warning(
+                            "stripe webhook: checkout.session.completed — no user found for customer_id=%s",
+                            customer_id,
+                        )
+
+        elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             customer_id: str = obj["customer"]
             sub_status: str = obj["status"]
             tier = "pro" if sub_status == "active" else "free"

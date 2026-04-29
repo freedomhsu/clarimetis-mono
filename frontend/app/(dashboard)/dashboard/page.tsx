@@ -127,6 +127,9 @@ function DashboardContent() {
   const { tier, loadTier } = useDashboard();
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Keep a stable ref to loadTier so the interval closure never goes stale.
+  const loadTierRef = useRef(loadTier);
+  useEffect(() => { loadTierRef.current = loadTier; }, [loadTier]);
 
   useEffect(() => {
     if (searchParams.get("upgrade") === "success") {
@@ -137,11 +140,13 @@ function DashboardContent() {
       url.searchParams.delete("plan");
       window.history.replaceState({}, "", url.pathname);
 
-      // Poll until the backend reflects the new tier (Stripe webhook latency).
-      // Stop after 30 s or when tier changes to "pro".
-      const deadline = Date.now() + 30_000;
+      // Fetch immediately — webhook may already be processed.
+      loadTierRef.current();
+
+      // Then poll every 2 s for up to 60 s to handle Stripe webhook latency.
+      const deadline = Date.now() + 60_000;
       pollRef.current = setInterval(async () => {
-        await loadTier();
+        await loadTierRef.current();
         if (Date.now() >= deadline) {
           clearInterval(pollRef.current!);
           pollRef.current = null;
