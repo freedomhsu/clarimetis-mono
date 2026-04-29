@@ -18,6 +18,8 @@ interface DashboardContextValue {
   billingLoading: BillingAction;
   /** Last billing error message, or null. */
   billingError: string | null;
+  /** Re-fetch the subscription tier from the backend. */
+  loadTier: () => Promise<void>;
   /** Redirect to Stripe Checkout for the given plan. */
   subscribe: (plan: BillingCycle) => Promise<void>;
   /** Redirect to the Stripe Billing Portal. */
@@ -28,6 +30,7 @@ const DashboardContext = createContext<DashboardContextValue>({
   tier: "free",
   billingLoading: null,
   billingError: null,
+  loadTier: async () => {},
   subscribe: async () => {},
   openBillingPortal: async () => {},
 });
@@ -82,7 +85,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardContext.Provider
-      value={{ tier, billingLoading, billingError, subscribe, openBillingPortal }}
+      value={{ tier, billingLoading, billingError, loadTier, subscribe, openBillingPortal }}
     >
       {children}
     </DashboardContext.Provider>

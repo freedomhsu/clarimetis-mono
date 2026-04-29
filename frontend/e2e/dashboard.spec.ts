@@ -252,3 +252,95 @@ test.describe("Insights page", () => {
       .toBeGreaterThan(callsAfterLoad);
   });
 });
+
+// ── Dashboard tier UI ─────────────────────────────────────────────────────
+
+/**
+ * These tests verify that the "Upgrade to Pro" / "Manage Billing" UI in the
+ * dashboard correctly reflects the user's subscription tier returned by the
+ * backend. All API calls are mocked so no live backend is needed.
+ */
+test.describe("Dashboard tier UI", () => {
+  /** Mount the base routes common to all tier tests. */
+  async function setupCommonRoutes(page: import("@playwright/test").Page, tier: "free" | "pro") {
+    await page.route(`${API_URL}/api/v1/users/sync`, (route) =>
+      route.fulfill({ status: 200, body: "{}" }),
+    );
+    await page.route(`${API_URL}/api/v1/users/me`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...fakeUser, subscription_tier: tier }),
+      }),
+    );
+    await page.route(`${API_URL}/api/v1/sessions`, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+    );
+    await page.route(`${API_URL}/api/v1/analytics/summary`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(fakeAnalytics),
+      }),
+    );
+  }
+
+  test("free user sees 'Upgrade to Pro' in the sidebar", async ({ page }) => {
+    await setupCommonRoutes(page, "free");
+    await page.goto("/dashboard");
+    await expect(page.getByText(/upgrade to pro/i).first()).toBeVisible({ timeout: 8_000 });
+  });
+
+  test("free user sees subscription plan buttons when Manage Plan is clicked", async ({ page }) => {
+    await setupCommonRoutes(page, "free");
+    await page.goto("/dashboard");
+    await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
+    await page.getByRole("button", { name: /manage plan/i }).click();
+    await expect(page.getByRole("button", { name: /pro monthly/i })).toBeVisible({ timeout: 4_000 });
+    await expect(page.getByRole("button", { name: /pro annual/i })).toBeVisible({ timeout: 4_000 });
+  });
+
+  test("pro user does NOT see 'Upgrade to Pro' in the sidebar", async ({ page }) => {
+    await setupCommonRoutes(page, "pro");
+    await page.goto("/dashboard");
+    await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/upgrade to pro/i)).not.toBeVisible();
+  });
+
+  test("pro user sees 'Pro plan · Unlimited' in the sidebar", async ({ page }) => {
+    await setupCommonRoutes(page, "pro");
+    await page.goto("/dashboard");
+    await expect(page.getByText(/pro plan.*unlimited/i)).toBeVisible({ timeout: 8_000 });
+  });
+
+  test("pro user opening Manage Plan sees only Manage Billing button (no subscribe buttons)", async ({ page }) => {
+    await setupCommonRoutes(page, "pro");
+    await page.goto("/dashboard");
+    await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
+    await page.getByRole("button", { name: /manage plan/i }).click();
+    await expect(page.getByRole("button", { name: /manage billing/i })).toBeVisible({ timeout: 4_000 });
+    await expect(page.getByRole("button", { name: /pro monthly/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /pro annual/i })).not.toBeVisible();
+  });
+
+  test("upgrade success banner appears when landing with ?upgrade=success", async ({ page }) => {
+    await setupCommonRoutes(page, "pro");
+    await page.goto("/dashboard?upgrade=success&plan=annual");
+    await expect(page.getByText(/you're now on pro/i)).toBeVisible({ timeout: 8_000 });
+  });
+
+  test("upgrade success banner is dismissed when the × button is clicked", async ({ page }) => {
+    await setupCommonRoutes(page, "pro");
+    await page.goto("/dashboard?upgrade=success");
+    await expect(page.getByText(/you're now on pro/i)).toBeVisible({ timeout: 8_000 });
+    await page.getByRole("button", { name: /dismiss/i }).click();
+    await expect(page.getByText(/you're now on pro/i)).not.toBeVisible();
+  });
+
+  test("?upgrade=success is removed from the URL after landing", async ({ page }) => {
+    await setupCommonRoutes(page, "pro");
+    await page.goto("/dashboard?upgrade=success&plan=annual");
+    await expect(page.getByText(/you're now on pro/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page).not.toHaveURL(/upgrade=success/);
+  });
+});
