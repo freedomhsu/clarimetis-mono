@@ -81,7 +81,7 @@ async def stream_chat_response(
     try:
         # Run the full streaming call + iteration inside a thread so it never
         # blocks the event loop. A 120-second hard timeout covers hung responses.
-        gen_config = GenerationConfig(temperature=0.7, max_output_tokens=2048)
+        gen_config = GenerationConfig(temperature=0.7, max_output_tokens=8192)
 
         def _collect_stream() -> list[str]:
             chunks: list[str] = []
