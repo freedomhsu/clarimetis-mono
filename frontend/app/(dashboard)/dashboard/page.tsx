@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
@@ -23,6 +23,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useDashboard } from "@/components/providers/DashboardContext";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -123,7 +124,9 @@ function DashboardContent() {
   const firstName = user?.firstName ?? "there";
   const greeting = useGreeting();
   const searchParams = useSearchParams();
+  const { tier, loadTier } = useDashboard();
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (searchParams.get("upgrade") === "success") {
@@ -133,8 +136,31 @@ function DashboardContent() {
       url.searchParams.delete("upgrade");
       url.searchParams.delete("plan");
       window.history.replaceState({}, "", url.pathname);
+
+      // Poll until the backend reflects the new tier (Stripe webhook latency).
+      // Stop after 30 s or when tier changes to "pro".
+      const deadline = Date.now() + 30_000;
+      pollRef.current = setInterval(async () => {
+        await loadTier();
+        if (Date.now() >= deadline) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+        }
+      }, 2_000);
     }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Stop polling once the tier has updated.
+  useEffect(() => {
+    if (tier === "pro" && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, [tier]);
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [planLoading, setPlanLoading] = useState<"monthly" | "annual" | "portal" | null>(null);
@@ -277,7 +303,9 @@ function DashboardContent() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{description}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        {tier === "pro" ? "View or cancel billing" : description}
+                      </p>
                     </div>
                   </button>
                 );
@@ -305,9 +333,13 @@ function DashboardContent() {
             <div className="mt-4 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="font-bold text-gray-900 dark:text-white">Upgrade to Pro</p>
+                  <p className="font-bold text-gray-900 dark:text-white">
+                    {tier === "pro" ? "Manage Billing" : "Upgrade to Pro"}
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Unlock unlimited messages, voice, insights & more.
+                    {tier === "pro"
+                      ? "View invoices, update payment method, or cancel your subscription."
+                      : "Unlock unlimited messages, voice, insights & more."}
                   </p>
                 </div>
                 <button
@@ -325,38 +357,42 @@ function DashboardContent() {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
-                  onClick={() => handleSubscribe("monthly")}
-                  disabled={planLoading !== null}
-                  className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-60 transition-colors"
-                >
-                  <span>Pro Monthly</span>
-                  <span className="flex items-center gap-1">
-                    {planLoading === "monthly" ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <span className="font-bold">$9.99/mo</span>
-                    )}
-                  </span>
-                </button>
+                {tier !== "pro" && (
+                  <>
+                    <button
+                      onClick={() => handleSubscribe("monthly")}
+                      disabled={planLoading !== null}
+                      className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-60 transition-colors"
+                    >
+                      <span>Pro Monthly</span>
+                      <span className="flex items-center gap-1">
+                        {planLoading === "monthly" ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <span className="font-bold">$9.99/mo</span>
+                        )}
+                      </span>
+                    </button>
 
-                <button
-                  onClick={() => handleSubscribe("annual")}
-                  disabled={planLoading !== null}
-                  className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 transition-colors"
-                >
-                  <span>
-                    Pro Annual
-                    <span className="ml-1.5 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full">Save $20</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    {planLoading === "annual" ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <span className="font-bold">$99.99/yr</span>
-                    )}
-                  </span>
-                </button>
+                    <button
+                      onClick={() => handleSubscribe("annual")}
+                      disabled={planLoading !== null}
+                      className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 transition-colors"
+                    >
+                      <span>
+                        Pro Annual
+                        <span className="ml-1.5 text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full">Save $20</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        {planLoading === "annual" ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <span className="font-bold">$99.99/yr</span>
+                        )}
+                      </span>
+                    </button>
+                  </>
+                )}
 
                 <button
                   onClick={handleBillingPortal}
