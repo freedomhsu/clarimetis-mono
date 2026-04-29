@@ -272,33 +272,14 @@ describe("useChat — subscription errors", () => {
   });
 });
 
-// ── sendMessage — deferred loadMessages (response-persistence regression) ─
+// ── sendMessage — response persistence regression ─────────────────────────
 
-describe("useChat — deferred loadMessages after stream", () => {
+describe("useChat — response persistence after stream", () => {
   it("keeps the assistant message visible immediately after stream ends", async () => {
-    // Regression guard: the response must remain in state right after streaming
-    // completes, before the deferred loadMessages() runs (800 ms later).
-    // The beforeEach mock makes getMessages never resolve, so it cannot wipe state.
+    // Regression guard: loadMessages() must NOT be called after sendMessage,
+    // because the backend persists the assistant message in a background task
+    // that races any immediate GET. The optimistic message must stay in state.
     mockApi.sendMessage.mockResolvedValue(makeStream("Hi there!"));
-
-    const { result } = renderHook(() => useChat("sess1"));
-
-    act(() => { void result.current.sendMessage("hello"); });
-
-    await waitFor(() => {
-      expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
-    });
-
-    // getMessages was called for initial load only (still pending/never resolves),
-    // so it cannot have overwritten state — message must still be present.
-    expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
-  });
-
-  it("calls loadMessages via setTimeout (not immediately) after stream ends", async () => {
-    // Verify that the reload is scheduled with a delay rather than fired synchronously.
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
-
-    mockApi.sendMessage.mockResolvedValue(makeStream("response"));
 
     const { result } = renderHook(() => useChat("sess1"));
 
@@ -306,13 +287,25 @@ describe("useChat — deferred loadMessages after stream", () => {
       await result.current.sendMessage("hello");
     });
 
-    // A setTimeout call should have been made for the deferred loadMessages.
-    // The delay must be > 0 (i.e. not an immediate call).
-    const deferredCalls = setTimeoutSpy.mock.calls.filter(
-      ([_fn, delay]) => typeof delay === "number" && delay > 0
-    );
-    expect(deferredCalls.length).toBeGreaterThan(0);
+    expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
+  });
 
-    setTimeoutSpy.mockRestore();
+  it("does NOT call loadMessages after stream ends", async () => {
+    // Verify getMessages is not called as part of sendMessage.
+    // It is called once on mount (via useEffect → loadMessages) and must not
+    // be called again when sendMessage completes.
+    mockApi.sendMessage.mockResolvedValue(makeStream("response"));
+    mockApi.getMessages.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    // getMessages may have been called once (mount). Must not have been called
+    // a second time as a result of sendMessage.
+    const callCount = mockApi.getMessages.mock.calls.length;
+    expect(callCount).toBeLessThanOrEqual(1);
   });
 });

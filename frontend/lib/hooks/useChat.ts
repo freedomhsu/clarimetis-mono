@@ -94,10 +94,11 @@ export function useChat(sessionId: string) {
         setStreamingContent("");
         setThinkingStatus("");
         accumulatedRef.current = "";
-        // Wait briefly for the backend background task to commit the assistant
-        // message before reloading — avoids the race where loadMessages() wins
-        // against the DB write and overwrites state with a stale list.
-        setTimeout(() => { loadMessages(); }, 800);
+        // Don't reload from server here — the backend saves the assistant message
+        // as a background task which races any immediate GET. The optimistic message
+        // already has the full content; crisis_flagged is visible via the streamed
+        // banner text and will sync correctly on the next loadMessages() call
+        // (e.g. when the user navigates back to the session).
       } catch (err) {
         // User stopped generation — keep whatever was already streamed
         if (err instanceof Error && err.name === "AbortError") {
