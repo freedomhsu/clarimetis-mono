@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
+import { useAuth } from "@clerk/nextjs";
 import { useChat } from "@/lib/hooks/useChat";
 import { useDashboard } from "@/components/providers/DashboardContext";
 import { api, type Message, type SubscriptionError } from "@/lib/api";
@@ -193,6 +194,7 @@ function UpgradeGate({
 }
 
 export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
+  const { isLoaded: clerkLoaded } = useAuth();
   const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration } =
     useChat(sessionId);
   const [dismissedError, setDismissedError] = useState(false);
@@ -314,7 +316,7 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
               </button>
             </div>
           )}
-          <MessageInput onSend={sendMessage} onStop={stopGeneration} isStreaming={isLoading} disabled={false} onSubscriptionError={setSubscriptionError} />
+          <MessageInput onSend={sendMessage} onStop={stopGeneration} isStreaming={isLoading} disabled={!clerkLoaded} onSubscriptionError={setSubscriptionError} />
         </div>
       )}
     </div>  );
