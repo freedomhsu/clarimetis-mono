@@ -2,7 +2,7 @@
 
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { AuthCard } from "./AuthCard";
@@ -12,9 +12,22 @@ import { AppleIcon } from "./AppleIcon";
 import { VerifyEmailForm } from "./VerifyEmailForm";
 import { Loader2 } from "lucide-react";
 
+function getSafeRedirect(searchParams: ReturnType<typeof useSearchParams>, fallback = "/dashboard"): string {
+  const raw = searchParams.get("redirect_url");
+  if (!raw) return fallback;
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin === window.location.origin) return url.pathname + url.search + url.hash;
+  } catch {
+    // Fall through
+  }
+  return raw.startsWith("/") ? raw : fallback;
+}
+
 export function SignUpForm() {
   const { signUp, setActive, isLoaded } = useSignUp();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -46,7 +59,7 @@ export function SignUpForm() {
     if (!isLoaded) return;
     if (signUp.status === "complete") {
       await setActive({ session: signUp.createdSessionId });
-      router.push("/dashboard");
+      router.push(getSafeRedirect(searchParams));
     }
   }
 
@@ -58,7 +71,7 @@ export function SignUpForm() {
       await signUp.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/dashboard",
+        redirectUrlComplete: getSafeRedirect(searchParams),
       });
     } catch (err) {
       setError(clerkError(err));
@@ -73,7 +86,7 @@ export function SignUpForm() {
       await signUp.authenticateWithRedirect({
         strategy: "oauth_apple",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/dashboard",
+        redirectUrlComplete: getSafeRedirect(searchParams),
       });
     } catch (err) {
       setError(clerkError(err));

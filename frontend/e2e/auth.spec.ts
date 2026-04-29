@@ -110,7 +110,23 @@ test.describe("Sign-in page", () => {
   });
 });
 
-// ── Sign-up page rendering ─────────────────────────────────────────────────
+// ── redirect_url preservation ──────────────────────────────────────────────
+
+test.describe("Sign-in redirect_url", () => {
+  test("sign-in page loads with redirect_url param present", async ({ page }) => {
+    const redirectTarget = "/dashboard?upgrade=success&plan=annual";
+    await page.goto(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`);
+    // Page should remain on sign-in (not loop or error) and still show the form
+    await expect(page).toHaveURL(/sign-in/, { timeout: 8_000 });
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 8_000 });
+  });
+
+  test("sign-in page does not redirect an unauthenticated user away", async ({ page }) => {
+    await page.goto("/sign-in?redirect_url=%2Fdashboard%3Fupgrade%3Dsuccess");
+    await expect(page).toHaveURL(/sign-in/, { timeout: 8_000 });
+  });
+});
+
 
 test.describe("Sign-up page", () => {
   test.beforeEach(async ({ page }) => {

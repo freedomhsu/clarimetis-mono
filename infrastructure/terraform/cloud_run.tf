@@ -160,11 +160,11 @@ resource "google_cloud_run_v2_service" "frontend" {
         value = "/sign-up"
       }
       env {
-        name  = "NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL"
+        name  = "NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL"
         value = "/dashboard"
       }
       env {
-        name  = "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL"
+        name  = "NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL"
         value = "/dashboard"
       }
 
