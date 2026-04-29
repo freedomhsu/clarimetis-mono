@@ -58,8 +58,8 @@ _SENTIMENT_WINDOW = 50
 
 
 async def _extract_profile_fields(messages: list[str]) -> dict:
-    init_vertexai()
     """Call Gemini to extract identity fields from a list of user messages."""
+    init_vertexai()
     if not messages:
         return {
             "core_values": None,
@@ -155,7 +155,7 @@ async def refresh_user_profile(user_id: uuid.UUID) -> None:
         # Stress proxy: invert normalised average sentiment into [0, 100]
         stress_score = round((1.0 - (avg_sentiment + 1.0) / 2.0) * 100, 1)
         profile.telemetry = {
-            **profile.telemetry,
+            **(profile.telemetry or {}),
             "sentiment_history": history,
             "avg_sentiment": round(avg_sentiment, 3),
             "stress_score": stress_score,

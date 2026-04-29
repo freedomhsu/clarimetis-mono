@@ -146,8 +146,6 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(check_message_quota),
 ) -> StreamingResponse:
-    import asyncio
-
     session = await _get_session_for_user(session_id, user, db)
 
     # Run blocking pre-work before the stream so that:
