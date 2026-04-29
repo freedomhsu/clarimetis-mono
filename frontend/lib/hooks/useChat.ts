@@ -94,8 +94,10 @@ export function useChat(sessionId: string) {
         setStreamingContent("");
         setThinkingStatus("");
         accumulatedRef.current = "";
-        // Fire-and-forget: sync server state (correct id, crisis_flagged, etc.)
-        loadMessages();
+        // Wait briefly for the backend background task to commit the assistant
+        // message before reloading — avoids the race where loadMessages() wins
+        // against the DB write and overwrites state with a stale list.
+        setTimeout(() => { loadMessages(); }, 800);
       } catch (err) {
         // User stopped generation — keep whatever was already streamed
         if (err instanceof Error && err.name === "AbortError") {
