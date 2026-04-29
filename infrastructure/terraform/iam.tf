@@ -83,3 +83,14 @@ resource "google_project_iam_member" "github_actions_sa_user" {
   role    = "roles/iam.serviceAccountUser"
   member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
+
+# ── Frontend → Backend proxy auth ─────────────────────────────────────────────
+# The frontend Cloud Run service calls the private backend via the Next.js proxy.
+# Granting run.invoker here allows the frontend's service account to obtain a
+# valid OIDC identity token and authenticate to the backend Cloud Run service.
+resource "google_cloud_run_v2_service_iam_member" "frontend_invokes_backend" {
+  name     = google_cloud_run_v2_service.backend.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.cloud_run.email}"
+}

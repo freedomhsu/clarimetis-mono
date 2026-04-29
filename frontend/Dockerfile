@@ -27,14 +27,14 @@ COPY . .
 
 # NEXT_PUBLIC_* vars are baked into the bundle at build time.
 # Pass them via --build-arg in CI/CD (or docker build locally).
-ARG NEXT_PUBLIC_API_URL
+# Note: NEXT_PUBLIC_API_URL is intentionally omitted — the browser now routes all
+# API calls through the Next.js proxy (/api/proxy) instead of the backend directly.
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 ARG NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
 ARG NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
@@ -57,6 +57,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public                    ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
+
+# BACKEND_URL is injected at runtime by Cloud Run (not baked into image).
+# Provide a safe default for local standalone runs.
+ENV BACKEND_URL=http://localhost:8000
 
 USER nextjs
 

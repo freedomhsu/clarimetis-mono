@@ -167,6 +167,13 @@ resource "google_cloud_run_v2_service" "frontend" {
         name  = "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL"
         value = "/dashboard"
       }
+
+      # Server-side env var consumed by the Next.js proxy route handler.
+      # Not NEXT_PUBLIC_ — never exposed to the browser.
+      env {
+        name  = "BACKEND_URL"
+        value = google_cloud_run_v2_service.backend.uri
+      }
     }
   }
 

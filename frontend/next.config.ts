@@ -1,15 +1,5 @@
 import type { NextConfig } from "next";
 
-// Derive the API origin at build/start time so the CSP allows cross-origin
-// requests to the backend (e.g. Cloud Run in production).
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-let apiOrigin = rawApiUrl;
-try {
-  apiOrigin = new URL(rawApiUrl).origin;
-} catch {
-  // If the value isn't a valid URL, include it as-is.
-}
-
 const nextConfig: NextConfig = {
   output: "standalone",
   turbopack: {},
@@ -54,7 +44,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://storage.googleapis.com https://img.clerk.com",
               "font-src 'self' data:",
-              `connect-src 'self' ${apiOrigin} https://*.clerk.accounts.dev wss://*.clerk.accounts.dev https://clerk-telemetry.com`,
+              // API calls go to /api/proxy (same origin) — no external connect-src needed for backend
+              `connect-src 'self' https://*.clerk.accounts.dev wss://*.clerk.accounts.dev https://clerk-telemetry.com`,
               "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
               "media-src 'self' blob:",
               "worker-src 'self' blob:",
