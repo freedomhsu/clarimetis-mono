@@ -25,6 +25,11 @@ test.use({ storageState: { cookies: [], origins: [] } });
 // ── Redirect tests ─────────────────────────────────────────────────────────
 
 test.describe("Unauthenticated redirect", () => {
+  test("home page is accessible (not redirected)", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveURL(/^\/(?:\?.*)?$/, { timeout: 8_000 });
+  });
+
   test("visiting /dashboard redirects to /sign-in", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/sign-in/, { timeout: 8_000 });

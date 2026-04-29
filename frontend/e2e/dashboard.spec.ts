@@ -374,8 +374,10 @@ test.describe("Dashboard tier UI", () => {
 
       await page.goto("/dashboard?upgrade=success");
 
-      // Initially the DB hasn't been updated yet — banner is shown but sidebar may
-      // still say "free". After polling the second call returns "pro".
+      // The banner only appears once polling confirms tier === "pro".
+      // First /users/me returns "free" (webhook hasn't processed yet), the second
+      // (polling interval) returns "pro" and both the banner and the sidebar flip
+      // at the same time.
       await expect(page.getByText(/you're now on pro/i)).toBeVisible({ timeout: 8_000 });
 
       // Polling should flip the sidebar to "Pro plan · Unlimited" without a page reload.

@@ -11,6 +11,17 @@
 
 import { test, expect } from "./fixtures";
 
+test.describe("Authenticated user visiting home or auth pages", () => {
+  test(
+    "redirects to /dashboard when visiting the home page",
+    async ({ page }) => {
+      await page.goto("/");
+      await expect(page).not.toHaveURL(/^\/(?:\?.*)?$/, { timeout: 8_000 });
+      await expect(page).toHaveURL(/dashboard/, { timeout: 8_000 });
+    },
+  );
+});
+
 test.describe("Authenticated user visiting sign-in", () => {
   test(
     "redirects to /dashboard when no redirect_url is present",

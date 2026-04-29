@@ -125,47 +125,69 @@ function DashboardContent() {
   const greeting = useGreeting();
   const searchParams = useSearchParams();
   const { tier, loadTier } = useDashboard();
+  // "pendingUpgrade" means the user came back from Stripe checkout and we are
+  // waiting for the webhook to be reflected in /users/me.  The success banner
+  // is only shown once polling actually confirms tier === "pro".
+  const [pendingUpgrade, setPendingUpgrade] = useState(false);
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Keep a stable ref to loadTier so the interval closure never goes stale.
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollActiveRef = useRef(false); // guard against concurrent loadTier calls
+  // Keep a stable ref to loadTier so the timeout closure never goes stale.
   const loadTierRef = useRef(loadTier);
   useEffect(() => { loadTierRef.current = loadTier; }, [loadTier]);
 
   useEffect(() => {
     if (searchParams.get("upgrade") === "success") {
-      setShowUpgradeSuccess(true);
+      setPendingUpgrade(true);
       // Remove query param from URL without triggering navigation
       const url = new URL(window.location.href);
       url.searchParams.delete("upgrade");
       url.searchParams.delete("plan");
       window.history.replaceState({}, "", url.pathname);
 
-      // Fetch immediately — webhook may already be processed.
-      loadTierRef.current();
-
-      // Then poll every 2 s for up to 60 s to handle Stripe webhook latency.
+      // Use a recursive setTimeout instead of setInterval so the next poll
+      // only starts after the previous loadTier() call fully completes —
+      // prevents concurrent in-flight requests from racing on setTier.
       const deadline = Date.now() + 60_000;
-      pollRef.current = setInterval(async () => {
-        await loadTierRef.current();
-        if (Date.now() >= deadline) {
-          clearInterval(pollRef.current!);
+
+      async function poll() {
+        if (pollActiveRef.current) return;
+        pollActiveRef.current = true;
+        try {
+          await loadTierRef.current();
+        } finally {
+          pollActiveRef.current = false;
+        }
+        // Schedule next tick only if still within the deadline
+        if (Date.now() < deadline) {
+          pollRef.current = setTimeout(poll, 2_000);
+        } else {
           pollRef.current = null;
         }
-      }, 2_000);
+      }
+
+      poll();
     }
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      if (pollRef.current) {
+        clearTimeout(pollRef.current);
+        pollRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Stop polling once the tier has updated.
+  // Show the success banner and stop polling once tier is confirmed as pro.
   useEffect(() => {
-    if (tier === "pro" && pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+    if (pendingUpgrade && tier === "pro") {
+      setShowUpgradeSuccess(true);
+      setPendingUpgrade(false);
+      if (pollRef.current) {
+        clearTimeout(pollRef.current);
+        pollRef.current = null;
+      }
     }
-  }, [tier]);
+  }, [tier, pendingUpgrade]);
 
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [planLoading, setPlanLoading] = useState<"monthly" | "annual" | "portal" | null>(null);

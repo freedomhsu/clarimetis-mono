@@ -118,11 +118,18 @@ export function SignInForm() {
     }
   }
 
+  // Show a neutral loading state while Clerk SDK is initialising or while
+  // the redirect for an already-authenticated user is in flight.  Avoids
+  // painting the sign-in form at all for users who are already signed in.
+  if (!isLoaded || isSignedIn) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 size={28} className="animate-spin text-brand-500" />
+      </div>
+    );
+  }
+
   return (
-    <AuthCard
-      title="Welcome back"
-      subtitle="Sign in to your ClariMetis account"
-    >
       {/* Social */}
       <div className="grid grid-cols-2 gap-2">
         <button

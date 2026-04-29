@@ -60,7 +60,8 @@ async def handle_stripe_webhook(
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             customer_id: str = obj["customer"]
             sub_status: str = obj["status"]
-            tier = "pro" if sub_status == "active" else "free"
+            # "trialing" is treated as pro — users in a trial period have full access.
+            tier = "pro" if sub_status in ("active", "trialing") else "free"
             result = await db.execute(
                 select(User).where(User.stripe_customer_id == customer_id)
             )
