@@ -13,7 +13,13 @@ const isPublicRoute = createRouteMatcher([
   "/sw.js",
 ]);
 
-const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/forgot-password(.*)"]);
+// Routes where an already-authenticated user should be bounced to /dashboard.
+const isAuthOrHomeRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/forgot-password(.*)",
+]);
 
 /** Validate a redirect_url is same-origin and return the path+search+hash, or null. */
 function safePath(raw: string | null, origin: string): string | null {
@@ -30,10 +36,9 @@ function safePath(raw: string | null, origin: string): string | null {
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 
-  // Authenticated user visiting an auth page — redirect them straight to the
-  // redirect_url (Stripe flow) or /dashboard, server-side, before Clerk's own
-  // client-side redirect logic runs (which would strip the query params).
-  if (userId && isAuthRoute(req)) {
+  // Authenticated user visiting the home page or an auth page — redirect
+  // server-side before any client rendering, preserving any redirect_url param.
+  if (userId && isAuthOrHomeRoute(req)) {
     const destination =
       safePath(req.nextUrl.searchParams.get("redirect_url"), req.nextUrl.origin) ?? "/dashboard";
     return NextResponse.redirect(new URL(destination, req.nextUrl.origin));

@@ -83,6 +83,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     loadTier();
   }, [loadTier]);
 
+  // Re-fetch whenever the user returns to the tab — catches the case where
+  // the Stripe webhook processed while the tab was backgrounded.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadTier();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadTier]);
+
   return (
     <DashboardContext.Provider
       value={{ tier, billingLoading, billingError, loadTier, subscribe, openBillingPortal }}

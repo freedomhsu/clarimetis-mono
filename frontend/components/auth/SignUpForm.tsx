@@ -100,6 +100,16 @@ export function SignUpForm() {
     }
   }
 
+  // Show a neutral loading state while Clerk SDK is initialising or while
+  // the redirect for an already-authenticated user is in flight.
+  if (!isLoaded || isSignedIn) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 size={28} className="animate-spin text-brand-500" />
+      </div>
+    );
+  }
+
   if (verifying) {
     return (
       <VerifyEmailForm
