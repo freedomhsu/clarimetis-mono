@@ -54,6 +54,9 @@ async def _run_migrations() -> None:
         for stmt in statements:
             try:
                 async with engine.begin() as conn:
+                    # Fail fast if a DDL lock cannot be acquired (e.g. during a
+                    # rolling deploy where the previous revision holds table locks).
+                    await conn.execute(text("SET lock_timeout = '5s'"))
                     await conn.execute(text(stmt))
             except Exception as exc:
                 logger.warning(
