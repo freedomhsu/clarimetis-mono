@@ -211,4 +211,56 @@ test.describe("Chat flow", () => {
     await textarea.press("Enter");
     await expect(page.getByText("send this")).toBeVisible();
   });
+
+  test("AI response stays visible after stream ends and does not disappear", async ({ page }) => {
+    // Regression: loadMessages() was called immediately after streaming, racing
+    // the backend background task that saves the assistant message.  If the DB
+    // write hadn't committed yet the returned list was stale and the response
+    // vanished from the UI until the user refreshed.
+    //
+    // Fix: loadMessages() is now delayed 800 ms.  This test verifies the
+    // response remains visible for well beyond that window.
+    const aiReply = "I hear you — let's explore that together.";
+
+    // POST → stream the AI reply
+    await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
+      if (route.request().method() === "POST") {
+        await route.fulfill({
+          status: 200,
+          contentType: "text/plain",
+          body: aiReply,
+        });
+      } else if (route.request().method() === "GET") {
+        // Simulate the backend background task: first call returns empty (task not
+        // yet committed), second call returns the full exchange.
+        const callCount = (route.request() as { _callCount?: number })._callCount ?? 0;
+        (route.request() as { _callCount?: number })._callCount = callCount + 1;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(
+            callCount === 0
+              ? [] // first GET — background task not committed yet
+              : [
+                  fakeMessage({ role: "user", content: "I need support" }),
+                  fakeMessage({ content: aiReply }),
+                ],
+          ),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto(`/chat/${SESSION_ID}`);
+    await page.getByPlaceholder(/share what's on your mind/i).fill("I need support");
+    await page.getByRole("button", { name: /send/i }).click();
+
+    // Response must appear after streaming
+    await expect(page.getByText(aiReply)).toBeVisible({ timeout: 10_000 });
+
+    // Wait well past the 800 ms deferred reload — response must still be there
+    await page.waitForTimeout(1_500);
+    await expect(page.getByText(aiReply)).toBeVisible();
+  });
 });

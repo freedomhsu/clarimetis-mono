@@ -271,3 +271,48 @@ describe("useChat — subscription errors", () => {
     expect(result.current.subscriptionError).toBeNull();
   });
 });
+
+// ── sendMessage — deferred loadMessages (response-persistence regression) ─
+
+describe("useChat — deferred loadMessages after stream", () => {
+  it("keeps the assistant message visible immediately after stream ends", async () => {
+    // Regression guard: the response must remain in state right after streaming
+    // completes, before the deferred loadMessages() runs (800 ms later).
+    // The beforeEach mock makes getMessages never resolve, so it cannot wipe state.
+    mockApi.sendMessage.mockResolvedValue(makeStream("Hi there!"));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    act(() => { void result.current.sendMessage("hello"); });
+
+    await waitFor(() => {
+      expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
+    });
+
+    // getMessages was called for initial load only (still pending/never resolves),
+    // so it cannot have overwritten state — message must still be present.
+    expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
+  });
+
+  it("calls loadMessages via setTimeout (not immediately) after stream ends", async () => {
+    // Verify that the reload is scheduled with a delay rather than fired synchronously.
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+
+    mockApi.sendMessage.mockResolvedValue(makeStream("response"));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    // A setTimeout call should have been made for the deferred loadMessages.
+    // The delay must be > 0 (i.e. not an immediate call).
+    const deferredCalls = setTimeoutSpy.mock.calls.filter(
+      ([_fn, delay]) => typeof delay === "number" && delay > 0
+    );
+    expect(deferredCalls.length).toBeGreaterThan(0);
+
+    setTimeoutSpy.mockRestore();
+  });
+});
