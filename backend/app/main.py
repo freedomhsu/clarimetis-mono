@@ -41,7 +41,11 @@ async def _run_migrations() -> None:
         logger.warning("No *.sql migration files found in %s — skipping", migrations_dir)
         return
 
-    async with engine.begin() as conn:
+    # Use AUTOCOMMIT so each statement runs in its own implicit transaction.
+    # This prevents a single failed statement from aborting the entire migration
+    # and causing all subsequent statements to fail with InFailedSqlTransaction.
+    async with engine.connect() as conn:
+        await conn.execution_options(isolation_level="AUTOCOMMIT")
         for sql_path in sql_files:
             sql = sql_path.read_text()
             # Strip line comments and split on semicolons
