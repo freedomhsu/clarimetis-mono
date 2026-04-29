@@ -1,0 +1,34 @@
+/**
+ * Authenticated sign-in redirect tests.
+ *
+ * These tests run with the saved auth state (default storageState from
+ * playwright.config.ts) and verify that an already-signed-in user is
+ * immediately redirected away from the sign-in page.
+ *
+ * Kept in a separate file from auth.spec.ts because that file overrides
+ * storageState to { cookies: [], origins: [] } for its unauthenticated tests.
+ */
+
+import { test, expect } from "./fixtures";
+
+test.describe("Authenticated user visiting sign-in", () => {
+  test(
+    "redirects to /dashboard when no redirect_url is present",
+    async ({ page }) => {
+      await page.goto("/sign-in");
+      await expect(page).not.toHaveURL(/sign-in/, { timeout: 8_000 });
+      await expect(page).toHaveURL(/dashboard/, { timeout: 8_000 });
+    },
+  );
+
+  test(
+    "redirects to redirect_url destination after Stripe payment",
+    async ({ page }) => {
+      const redirectTarget = "/dashboard?upgrade=success&plan=annual";
+      await page.goto(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`);
+      // Should be sent straight to the dashboard with upgrade params — never show the form
+      await expect(page).not.toHaveURL(/sign-in/, { timeout: 8_000 });
+      await expect(page).toHaveURL(/dashboard.*upgrade=success/, { timeout: 8_000 });
+    },
+  );
+});
