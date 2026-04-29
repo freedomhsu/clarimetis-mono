@@ -11,6 +11,7 @@ import logging
 
 from vertexai.generative_models import GenerativeModel
 
+from app.config import get_settings
 from app.services.gcp_credentials import init_vertexai
 from app.services.utils import strip_markdown_json
 
