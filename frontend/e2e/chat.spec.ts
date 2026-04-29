@@ -222,6 +222,10 @@ test.describe("Chat flow", () => {
     // response remains visible for well beyond that window.
     const aiReply = "I hear you — let's explore that together.";
 
+    // Closure counter — route.request() is a new object each call so _callCount
+    // on the request object never persists; use a plain variable instead.
+    let getCallCount = 0;
+
     // POST → stream the AI reply
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       if (route.request().method() === "POST") {
@@ -232,15 +236,15 @@ test.describe("Chat flow", () => {
         });
       } else if (route.request().method() === "GET") {
         // Simulate the backend background task: first call returns empty (task not
-        // yet committed), second call returns the full exchange.
-        const callCount = (route.request() as { _callCount?: number })._callCount ?? 0;
-        (route.request() as { _callCount?: number })._callCount = callCount + 1;
+        // yet committed), subsequent calls return the full exchange.
+        const isFirstCall = getCallCount === 0;
+        getCallCount++;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify(
-            callCount === 0
-              ? [] // first GET — background task not committed yet
+            isFirstCall
+              ? [] // initial mount load — background task not committed yet
               : [
                   fakeMessage({ role: "user", content: "I need support" }),
                   fakeMessage({ content: aiReply }),
