@@ -57,16 +57,14 @@ export default defineConfig({
   ],
 
   webServer: {
-    // Start the Next.js dev server automatically.
-    // The backend must be started separately (it has DB/GCP deps we can't
-    // auto-start here).
-    command: "npm run dev",
+    // In CI: build once then serve a production binary (fast startup, no JIT).
+    // Locally: use the dev server for fast iteration.
+    command: process.env.CI ? "npm run build && npm start" : "npm run dev",
     url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 120_000,
-    // Suppress Next.js dev-server output (browser console messages forwarded
-    // by Next.js, e.g. repeated Clerk "development keys" warnings).
-    stdout: "ignore",
-    stderr: "ignore",
+    reuseExistingServer: !process.env.CI,
+    // CI build + start can take a few minutes; local dev server is fast.
+    timeout: process.env.CI ? 300_000 : 120_000,
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });

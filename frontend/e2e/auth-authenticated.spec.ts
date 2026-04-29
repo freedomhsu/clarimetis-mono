@@ -37,9 +37,11 @@ test.describe("Authenticated user visiting sign-in", () => {
     async ({ page }) => {
       const redirectTarget = "/dashboard?upgrade=success&plan=annual";
       await page.goto(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`);
-      // Should be sent straight to the dashboard with upgrade params — never show the form
+      // Should be sent straight to /dashboard — never show the sign-in form.
+      // Note: the dashboard page immediately strips ?upgrade=success from the URL
+      // via window.history.replaceState so we only assert we reached /dashboard.
       await expect(page).not.toHaveURL(/sign-in/, { timeout: 8_000 });
-      await expect(page).toHaveURL(/dashboard.*upgrade=success/, { timeout: 8_000 });
+      await expect(page).toHaveURL(/dashboard/, { timeout: 8_000 });
     },
   );
 });
