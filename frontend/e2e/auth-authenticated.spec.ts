@@ -16,7 +16,7 @@ test.describe("Authenticated user visiting home or auth pages", () => {
     "redirects to /dashboard when visiting the home page",
     async ({ page }) => {
       await page.goto("/");
-      await expect(page).not.toHaveURL(/^\/(?:\?.*)?$/, { timeout: 8_000 });
+      // Confirm the redirect happened — toHaveURL matches full URL so check /dashboard directly.
       await expect(page).toHaveURL(/dashboard/, { timeout: 8_000 });
     },
   );
