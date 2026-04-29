@@ -169,6 +169,6 @@ test.describe("Crisis banner", () => {
     await page.getByRole("button", { name: /send/i }).click();
 
     // CrisisBanner renders when crisis_flagged is inferred from stream content
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/988 suicide.*crisis lifeline/i).first()).toBeVisible({ timeout: 10_000 });
   });
 });
