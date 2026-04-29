@@ -2,7 +2,7 @@
 
 import { useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { AuthCard } from "./AuthCard";
@@ -13,9 +13,24 @@ import { Loader2 } from "lucide-react";
 
 type Step = "identifier" | "password";
 
+/** Safely extract a same-site redirect path from the ?redirect_url param. */
+function getSafeRedirect(searchParams: ReturnType<typeof useSearchParams>, fallback = "/dashboard"): string {
+  const raw = searchParams.get("redirect_url");
+  if (!raw) return fallback;
+  try {
+    // Allow absolute URLs on the same origin
+    const url = new URL(raw, window.location.origin);
+    if (url.origin === window.location.origin) return url.pathname + url.search + url.hash;
+  } catch {
+    // Fall through — treat as relative if it starts with /
+  }
+  return raw.startsWith("/") ? raw : fallback;
+}
+
 export function SignInForm() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>("identifier");
   const [email, setEmail] = useState("");
@@ -52,7 +67,7 @@ export function SignInForm() {
       });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        router.push("/dashboard");
+        router.push(getSafeRedirect(searchParams));
       } else {
         setError("Additional verification required. Please try again.");
       }
@@ -71,7 +86,7 @@ export function SignInForm() {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/dashboard",
+        redirectUrlComplete: getSafeRedirect(searchParams),
       });
     } catch (err) {
       setError(clerkError(err));
@@ -86,7 +101,7 @@ export function SignInForm() {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_apple",
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/dashboard",
+        redirectUrlComplete: getSafeRedirect(searchParams),
       });
     } catch (err) {
       setError(clerkError(err));

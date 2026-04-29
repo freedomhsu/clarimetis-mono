@@ -4,16 +4,29 @@ import { useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useState, FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCard } from "./AuthCard";
 import { AuthInput } from "./AuthInput";
 import { Loader2, MailCheck } from "lucide-react";
 
 type Step = "email" | "reset";
 
+function getSafeRedirect(searchParams: ReturnType<typeof useSearchParams>, fallback = "/dashboard"): string {
+  const raw = searchParams.get("redirect_url");
+  if (!raw) return fallback;
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin === window.location.origin) return url.pathname + url.search + url.hash;
+  } catch {
+    // Fall through
+  }
+  return raw.startsWith("/") ? raw : fallback;
+}
+
 export function ForgotPasswordForm() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -64,7 +77,7 @@ export function ForgotPasswordForm() {
       });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        router.push("/dashboard");
+        router.push(getSafeRedirect(searchParams));
       } else {
         setError("Could not reset password. Please try again.");
       }
