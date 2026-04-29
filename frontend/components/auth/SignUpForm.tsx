@@ -1,9 +1,9 @@
 "use client";
 
-import { useSignUp } from "@clerk/nextjs";
+import { useAuth, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import Link from "next/link";
 import { AuthCard } from "./AuthCard";
 import { AuthInput } from "./AuthInput";
@@ -25,9 +25,16 @@ function getSafeRedirect(searchParams: ReturnType<typeof useSearchParams>, fallb
 }
 
 export function SignUpForm() {
+  const { isSignedIn } = useAuth();
   const { signUp, setActive, isLoaded } = useSignUp();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (isSignedIn) {
+      router.replace(getSafeRedirect(searchParams));
+    }
+  }, [isSignedIn, router, searchParams]);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
