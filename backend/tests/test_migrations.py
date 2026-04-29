@@ -105,3 +105,86 @@ def test_migration_file_ordering():
             f"Migration file '{f.name}' must start with a numeric prefix "
             "(e.g. 001_init.sql) so lexicographic sorting is correct."
         )
+
+
+def _build_migrated_db() -> sqlite3.Connection:
+    """Return an in-memory SQLite connection with all migrations applied.
+
+    Shared helper used by schema assertion tests below.
+    """
+    files = _get_migration_files()
+    conn = sqlite3.connect(":memory:")
+    conn.execute("PRAGMA foreign_keys = ON")
+    for sql_path in files:
+        sql = sql_path.read_text()
+        lines = [ln for ln in sql.splitlines() if not ln.strip().startswith("--")]
+        sql_clean = re.sub(r"\$\$.*?\$\$", "''", "\n".join(lines), flags=re.DOTALL)
+        statements = [s.strip() for s in sql_clean.split(";") if s.strip()]
+        for stmt in statements:
+            if _is_skippable(stmt):
+                continue
+            stmt = re.sub(r"\bTIMESTAMPTZ\b", "TEXT", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"\bJSONB\b", "TEXT", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"\bUUID\b", "TEXT", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"DEFAULT gen_random_uuid\(\)", "DEFAULT (lower(hex(randomblob(16))))", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"\bFLOAT\b", "REAL", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"\bNOW\(\)", "CURRENT_TIMESTAMP", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"\bvector\(\d+\)", "TEXT", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b", "ADD COLUMN", stmt, flags=re.IGNORECASE)
+            stmt = re.sub(r"DROP\s+COLUMN\s+IF\s+EXISTS\b", "DROP COLUMN", stmt, flags=re.IGNORECASE)
+            try:
+                conn.execute(stmt)
+            except sqlite3.OperationalError as exc:
+                msg = str(exc).lower()
+                if any(k in msg for k in ("already exists", "no such module")):
+                    continue
+                raise
+    return conn
+
+
+# Canonical schema: table → required columns.
+# Extend this dict whenever a migration adds a column that is load-path critical
+# (i.e. queried by SQLAlchemy ORM on every request).
+_REQUIRED_COLUMNS: dict[str, list[str]] = {
+    "users": [
+        "id", "clerk_user_id", "email", "full_name",
+        "stripe_customer_id", "stripe_subscription_id", "subscription_tier",
+        "created_at", "updated_at",
+    ],
+    "chat_sessions": ["id", "user_id", "title", "summary", "created_at", "updated_at"],
+    "messages": [
+        "id", "session_id", "role", "content", "media_urls",
+        "crisis_flagged", "sentiment_score", "embedding", "created_at",
+    ],
+    "user_profiles": [
+        "id", "user_id", "core_values", "long_term_goals",
+        "recurring_patterns", "telemetry", "updated_at",
+    ],
+    "knowledge_docs": ["id", "title", "content", "category", "embedding", "created_at"],
+    "score_snapshots": [
+        "id", "user_id", "confidence_score", "anxiety_score",
+        "self_esteem_score", "stress_load", "social_gratitude_index",
+        "data_reliability", "created_at",
+    ],
+}
+
+
+def test_schema_columns_exist_after_migration():
+    """Every column referenced by the ORM must be present after migrations run.
+
+    This is the test that catches ALTER TABLE ADD COLUMN statements that were
+    silently rolled back due to a transaction failure earlier in the same file
+    (e.g. a trigger referencing a function not yet created).
+    """
+    conn = _build_migrated_db()
+    for table, columns in _REQUIRED_COLUMNS.items():
+        # PRAGMA table_info returns one row per column; empty = table missing.
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        assert rows, f"Table '{table}' is missing after migrations"
+        existing = {row[1] for row in rows}  # row[1] = column name
+        for col in columns:
+            assert col in existing, (
+                f"Column '{table}.{col}' is missing after migrations. "
+                "A migration ALTER TABLE statement may have been silently rolled back."
+            )
+    conn.close()
