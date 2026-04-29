@@ -272,33 +272,14 @@ describe("useChat — subscription errors", () => {
   });
 });
 
-// ── sendMessage — deferred loadMessages (response-persistence regression) ─
+// ── sendMessage — response persistence regression ─────────────────────────
 
-describe("useChat — deferred loadMessages after stream", () => {
+describe("useChat — response persistence after stream", () => {
   it("keeps the assistant message visible immediately after stream ends", async () => {
-    // Regression guard: the response must remain in state right after streaming
-    // completes, before the deferred loadMessages() runs (800 ms later).
-    // The beforeEach mock makes getMessages never resolve, so it cannot wipe state.
+    // Regression guard: loadMessages() must NOT be called after sendMessage,
+    // because the backend persists the assistant message in a background task
+    // that races any immediate GET. The optimistic message must stay in state.
     mockApi.sendMessage.mockResolvedValue(makeStream("Hi there!"));
-
-    const { result } = renderHook(() => useChat("sess1"));
-
-    act(() => { void result.current.sendMessage("hello"); });
-
-    await waitFor(() => {
-      expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
-    });
-
-    // getMessages was called for initial load only (still pending/never resolves),
-    // so it cannot have overwritten state — message must still be present.
-    expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
-  });
-
-  it("calls loadMessages via setTimeout (not immediately) after stream ends", async () => {
-    // Verify that the reload is scheduled with a delay rather than fired synchronously.
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
-
-    mockApi.sendMessage.mockResolvedValue(makeStream("response"));
 
     const { result } = renderHook(() => useChat("sess1"));
 
@@ -306,13 +287,55 @@ describe("useChat — deferred loadMessages after stream", () => {
       await result.current.sendMessage("hello");
     });
 
-    // A setTimeout call should have been made for the deferred loadMessages.
-    // The delay must be > 0 (i.e. not an immediate call).
-    const deferredCalls = setTimeoutSpy.mock.calls.filter(
-      ([_fn, delay]) => typeof delay === "number" && delay > 0
-    );
-    expect(deferredCalls.length).toBeGreaterThan(0);
+    expect(result.current.messages.find((m) => m.role === "assistant")?.content).toBe("Hi there!");
+  });
 
-    setTimeoutSpy.mockRestore();
+  it("does NOT call loadMessages after stream ends", async () => {
+    mockApi.sendMessage.mockResolvedValue(makeStream("response"));
+    mockApi.getMessages.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    // getMessages may have been called once (mount). Must not have been called
+    // a second time as a result of sendMessage.
+    const callCount = mockApi.getMessages.mock.calls.length;
+    expect(callCount).toBeLessThanOrEqual(1);
+  });
+
+  it("sets crisis_flagged=true on the optimistic message when stream contains 988lifeline.org", async () => {
+    // The backend prepends crisis_banner_text to the stream for crisis messages.
+    // useChat detects this without a server round-trip.
+    const crisisStream =
+      "I want to make sure you're safe right now. " +
+      "If you're in crisis, please reach out to the **988 Suicide & Crisis Lifeline** " +
+      "by calling or texting **988** (US), or chat at https://988lifeline.org. " +
+      "I'm here with you.\n\nI hear you.";
+    mockApi.sendMessage.mockResolvedValue(makeStream(crisisStream));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("I don't want to be here anymore");
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistant?.crisis_flagged).toBe(true);
+  });
+
+  it("leaves crisis_flagged=false for normal (non-crisis) messages", async () => {
+    mockApi.sendMessage.mockResolvedValue(makeStream("Here is some coaching advice."));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("I need help with my goals");
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistant?.crisis_flagged).toBe(false);
   });
 });

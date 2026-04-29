@@ -143,30 +143,22 @@ test.describe("Crisis banner", () => {
   }) => {
     const userContent = "I don't want to be here anymore";
     const aiReply = "I can hear how much pain you are in right now.";
+    // The backend prepends crisis_banner_text to the stream when is_crisis=True.
+    // We replicate that here so the frontend can detect crisis from content.
+    const crisisPrefix =
+      "I want to make sure you're safe right now. " +
+      "If you're in crisis, please reach out to the **988 Suicide & Crisis Lifeline** " +
+      "by calling or texting **988** (US), or chat at https://988lifeline.org. " +
+      "I'm here with you.\n\n";
+    const streamBody = crisisPrefix + aiReply;
 
-    // Step 1: initially no messages
-    let callCount = 0;
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       const method = route.request().method();
       if (method === "GET") {
-        callCount++;
-        if (callCount === 1) {
-          // First load: no messages
-          await route.fulfill({ status: 200, body: "[]" });
-        } else {
-          // Subsequent loads (after send): return crisis-flagged exchange
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify([
-              fakeMessage({ role: "user", content: userContent, crisis_flagged: false }),
-              fakeMessage({ content: aiReply, crisis_flagged: true }),
-            ]),
-          });
-        }
+        await route.fulfill({ status: 200, body: "[]" });
       } else if (method === "POST") {
-        // Streaming response — return plain text
-        await route.fulfill({ status: 200, contentType: "text/plain", body: aiReply });
+        // Include the crisis banner prefix — matches what the backend actually sends
+        await route.fulfill({ status: 200, contentType: "text/plain", body: streamBody });
       } else {
         await route.continue();
       }
@@ -176,7 +168,7 @@ test.describe("Crisis banner", () => {
     await page.getByPlaceholder(/share what's on your mind/i).fill(userContent);
     await page.getByRole("button", { name: /send/i }).click();
 
-    // Banner should appear after the server confirms crisis_flagged
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).toBeVisible({ timeout: 10_000 });
+    // CrisisBanner renders when crisis_flagged is inferred from stream content
+    await expect(page.getByText(/988 suicide.*crisis lifeline/i).first()).toBeVisible({ timeout: 10_000 });
   });
 });

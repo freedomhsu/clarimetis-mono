@@ -81,23 +81,28 @@ export function useChat(sessionId: string) {
 
         // Add a local message immediately for snappy UI, then reload from the
         // server in the background to pick up the accurate `crisis_flagged` value.
+        // Detect crisis from the streamed content itself — the backend prepends
+        // the crisis banner text to the stream, so we can infer the flag locally
+        // without a second round-trip.
+        const isCrisis = accumulated.includes("988lifeline.org");
         const assistantMsg: Message = {
           id: crypto.randomUUID(),
           session_id: sessionId,
           role: "assistant",
           content: accumulated,
           media_urls: null,
-          crisis_flagged: false,
+          crisis_flagged: isCrisis,
           created_at: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
         setStreamingContent("");
         setThinkingStatus("");
         accumulatedRef.current = "";
-        // Wait briefly for the backend background task to commit the assistant
-        // message before reloading — avoids the race where loadMessages() wins
-        // against the DB write and overwrites state with a stale list.
-        setTimeout(() => { loadMessages(); }, 800);
+        // Don't reload from server here — the backend saves the assistant message
+        // as a background task which races any immediate GET. The optimistic message
+        // already has the full content; crisis_flagged is visible via the streamed
+        // banner text and will sync correctly on the next loadMessages() call
+        // (e.g. when the user navigates back to the session).
       } catch (err) {
         // User stopped generation — keep whatever was already streamed
         if (err instanceof Error && err.name === "AbortError") {
