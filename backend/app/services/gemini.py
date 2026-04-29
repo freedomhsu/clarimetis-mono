@@ -76,7 +76,7 @@ async def stream_chat_response(
         role = "user" if msg["role"] == "user" else "model"
         gemini_history.append(Content(role=role, parts=[Part.from_text(msg["content"])]))
 
-    chat = model.start_chat(history=gemini_history)
+    chat = model.start_chat(history=gemini_history, response_validation=False)
 
     try:
         # Run the full streaming call + iteration inside a thread so it never
