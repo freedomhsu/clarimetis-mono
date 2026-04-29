@@ -1,4 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// In production the browser never calls the backend directly — all requests are
+// forwarded through the Next.js server-side proxy at /api/proxy, which attaches
+// a GCP identity token so the backend can stay fully private.
+// In local development (no proxy server running), fall back to localhost.
+const IS_SERVER = typeof window === "undefined";
+const API_URL = IS_SERVER
+  ? (process.env.BACKEND_URL ?? "http://localhost:8000")
+  : "/api/proxy";
 
 export interface Session {
   id: string;
@@ -153,7 +160,8 @@ export const api = {
   },
 
   async deleteSession(token: string, sessionId: string): Promise<void> {
-    const res = await fetch(`${API_URL}/api/v1/sessions/${sessionId}`, {
+    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
+    const res = await fetch(`${baseUrl}/api/v1/sessions/${sessionId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -183,7 +191,8 @@ export const api = {
     mediaUrls?: string[],
     signal?: AbortSignal,
   ): Promise<ReadableStream<Uint8Array>> {
-    const res = await fetch(`${API_URL}/api/v1/sessions/${sessionId}/messages`, {
+    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
+    const res = await fetch(`${baseUrl}/api/v1/sessions/${sessionId}/messages`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -212,7 +221,8 @@ export const api = {
   ): Promise<{ url: string; content_type: string }> {
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch(`${API_URL}/api/v1/media/upload`, {
+    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
+    const res = await fetch(`${baseUrl}/api/v1/media/upload`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: form,
@@ -236,7 +246,8 @@ export const api = {
   ): Promise<{ transcript: string }> {
     const form = new FormData();
     form.append("file", audioBlob, "recording.webm");
-    const res = await fetch(`${API_URL}/api/v1/voice/transcribe`, {
+    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
+    const res = await fetch(`${baseUrl}/api/v1/voice/transcribe`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: form,

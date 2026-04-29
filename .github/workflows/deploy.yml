@@ -127,9 +127,11 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/frontend:${{ github.sha }}
             ${{ env.REGISTRY }}/frontend:latest
-          # NEXT_PUBLIC_* vars are baked into the Next.js bundle at build time
+          # NEXT_PUBLIC_* vars are baked into the Next.js bundle at build time.
+          # NEXT_PUBLIC_API_URL is intentionally omitted — the browser now routes
+          # API calls through the Next.js /api/proxy route handler (server-side),
+          # so the backend URL never needs to be exposed to the browser bundle.
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ steps.backend.outputs.url }}
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
             NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up

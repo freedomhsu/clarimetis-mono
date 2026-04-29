@@ -5,12 +5,12 @@ import time
 import httpx
 import jwt
 from jwt.algorithms import RSAAlgorithm
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import get_settings
 
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 _jwks_cache: dict | None = None
 _jwks_fetched_at: float = 0.0
@@ -42,9 +42,24 @@ async def _get_jwks(*, force_refresh: bool = False) -> dict:
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> str:
-    token = credentials.credentials
+    # When requests arrive through the Next.js proxy, the proxy puts the GCP
+    # identity token in Authorization (for Cloud Run IAM) and moves the Clerk
+    # JWT to X-Forwarded-Authorization. Fall back to Authorization for direct
+    # calls (local dev / health checks).
+    forwarded = request.headers.get("x-forwarded-authorization", "")
+    if forwarded.lower().startswith("bearer "):
+        token = forwarded[7:]
+    elif credentials:
+        token = credentials.credentials
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
         header = jwt.get_unverified_header(token)
         kid = header.get("kid")
