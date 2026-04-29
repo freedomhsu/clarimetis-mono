@@ -89,10 +89,7 @@ app.include_router(chat.router, prefix="/api/v1")
 app.include_router(media.router, prefix="/api/v1")
 app.include_router(voice.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
-# Stripe webhooks are mounted WITHOUT /api/v1 because the Stripe Dashboard
-# URL points to /api/proxy/webhooks/stripe (the frontend proxy strips /api/proxy,
-# leaving /webhooks/stripe on the backend).  Adding /api/v1 would cause 404s.
-app.include_router(stripe_webhooks.router)
+app.include_router(stripe_webhooks.router, prefix="/api/v1")
 
 
 @app.get("/health")

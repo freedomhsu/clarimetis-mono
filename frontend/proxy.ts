@@ -12,7 +12,7 @@ const isPublicRoute = createRouteMatcher([
   "/manifest.json",
   "/sw.js",
   // Stripe webhooks are authenticated by Stripe's own signature, not Clerk.
-  "/api/proxy/webhooks/(.*)",
+  "/api/proxy/api/v1/webhooks/(.*)",
 ]);
 
 // Routes where an already-authenticated user should be bounced to /dashboard.
