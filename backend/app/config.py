@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # Gemini model names — override via env to switch models without code changes
     gemini_flash_model: str = "gemini-2.5-flash"
     gemini_pro_model: str = "gemini-2.5-pro"
+    # Gemini generation parameters — override via env to tune without code changes
+    gemini_temperature: float = 0.7
+    gemini_max_output_tokens: int = 8192
 
     # Feature limits — override via env to tune without code changes
     # How long (seconds) analytics results are cached in-memory per user
