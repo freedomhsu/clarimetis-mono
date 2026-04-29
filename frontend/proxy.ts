@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -12,7 +13,32 @@ const isPublicRoute = createRouteMatcher([
   "/sw.js",
 ]);
 
+const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/forgot-password(.*)"]);
+
+/** Validate a redirect_url is same-origin and return the path+search+hash, or null. */
+function safePath(raw: string | null, origin: string): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw, origin);
+    if (url.origin === origin) return url.pathname + url.search + url.hash;
+  } catch {
+    // fall through
+  }
+  return raw.startsWith("/") ? raw : null;
+}
+
 export default clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
+
+  // Authenticated user visiting an auth page — redirect them straight to the
+  // redirect_url (Stripe flow) or /dashboard, server-side, before Clerk's own
+  // client-side redirect logic runs (which would strip the query params).
+  if (userId && isAuthRoute(req)) {
+    const destination =
+      safePath(req.nextUrl.searchParams.get("redirect_url"), req.nextUrl.origin) ?? "/dashboard";
+    return NextResponse.redirect(new URL(destination, req.nextUrl.origin));
+  }
+
   if (!isPublicRoute(req)) {
     await auth.protect();
   }
