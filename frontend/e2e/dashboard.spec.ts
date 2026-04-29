@@ -198,9 +198,9 @@ test.describe("Insights page", () => {
     await page.goto("/insights");
     // Scope to stat cards to avoid matching timestamps (e.g. "12:39:21 PM" also contains "12")
     const sessionsCard = page.locator("div", { has: page.getByText("Coaching sessions") });
-    await expect(sessionsCard.getByText("12")).toBeVisible({ timeout: 10_000 });
+    await expect(sessionsCard.getByText("12", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
     const messagesCard = page.locator("div", { has: page.getByText("Messages analysed") });
-    await expect(messagesCard.getByText("84")).toBeVisible({ timeout: 10_000 });
+    await expect(messagesCard.getByText("84", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("renders the top themes chips", async ({ page }) => {
