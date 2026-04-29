@@ -117,12 +117,12 @@ Your core approach:
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 async def classify_intent(message: str) -> str:
-    init_vertexai()
     """Classify the user's message into a specialist intent.
 
     Returns one of the INTENT_* constants. Defaults to INTENT_WELLNESS_COACH
     on any classification error so the chat never breaks.
     """
+    init_vertexai()
     model = GenerativeModel(get_settings().gemini_flash_model)
     prompt = f"{_CLASSIFIER_PROMPT}\n\nUser message: {message[:1000]}"
 
