@@ -291,9 +291,6 @@ describe("useChat — response persistence after stream", () => {
   });
 
   it("does NOT call loadMessages after stream ends", async () => {
-    // Verify getMessages is not called as part of sendMessage.
-    // It is called once on mount (via useEffect → loadMessages) and must not
-    // be called again when sendMessage completes.
     mockApi.sendMessage.mockResolvedValue(makeStream("response"));
     mockApi.getMessages.mockResolvedValue([]);
 
@@ -307,5 +304,38 @@ describe("useChat — response persistence after stream", () => {
     // a second time as a result of sendMessage.
     const callCount = mockApi.getMessages.mock.calls.length;
     expect(callCount).toBeLessThanOrEqual(1);
+  });
+
+  it("sets crisis_flagged=true on the optimistic message when stream contains 988lifeline.org", async () => {
+    // The backend prepends crisis_banner_text to the stream for crisis messages.
+    // useChat detects this without a server round-trip.
+    const crisisStream =
+      "I want to make sure you're safe right now. " +
+      "If you're in crisis, please reach out to the **988 Suicide & Crisis Lifeline** " +
+      "by calling or texting **988** (US), or chat at https://988lifeline.org. " +
+      "I'm here with you.\n\nI hear you.";
+    mockApi.sendMessage.mockResolvedValue(makeStream(crisisStream));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("I don't want to be here anymore");
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistant?.crisis_flagged).toBe(true);
+  });
+
+  it("leaves crisis_flagged=false for normal (non-crisis) messages", async () => {
+    mockApi.sendMessage.mockResolvedValue(makeStream("Here is some coaching advice."));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("I need help with my goals");
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistant?.crisis_flagged).toBe(false);
   });
 });

@@ -81,13 +81,17 @@ export function useChat(sessionId: string) {
 
         // Add a local message immediately for snappy UI, then reload from the
         // server in the background to pick up the accurate `crisis_flagged` value.
+        // Detect crisis from the streamed content itself — the backend prepends
+        // the crisis banner text to the stream, so we can infer the flag locally
+        // without a second round-trip.
+        const isCrisis = accumulated.includes("988lifeline.org");
         const assistantMsg: Message = {
           id: crypto.randomUUID(),
           session_id: sessionId,
           role: "assistant",
           content: accumulated,
           media_urls: null,
-          crisis_flagged: false,
+          crisis_flagged: isCrisis,
           created_at: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
