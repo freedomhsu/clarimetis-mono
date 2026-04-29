@@ -26,10 +26,23 @@ _STUB_MODULES = [
     "vertexai.generative_models",
     "vertexai.language_models",
     "langfuse",
-    "langfuse.decorators",
 ]
 for _mod in _STUB_MODULES:
     sys.modules.setdefault(_mod, MagicMock())
+
+# langfuse.decorators needs observe to be a pass-through so that decorated
+# functions (e.g. stream_chat_response) remain callable async generators in tests.
+_langfuse_decorators_stub = MagicMock()
+
+
+def _passthrough_observe(name=None, **kwargs):
+    def decorator(fn):
+        return fn
+    return decorator
+
+
+_langfuse_decorators_stub.observe = _passthrough_observe
+sys.modules.setdefault("langfuse.decorators", _langfuse_decorators_stub)
 
 import pytest
 import pytest_asyncio
