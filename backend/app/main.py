@@ -41,27 +41,28 @@ async def _run_migrations() -> None:
         logger.warning("No *.sql migration files found in %s — skipping", migrations_dir)
         return
 
-    # Use AUTOCOMMIT so each statement runs in its own implicit transaction.
-    # This prevents a single failed statement from aborting the entire migration
-    # and causing all subsequent statements to fail with InFailedSqlTransaction.
-    async with engine.connect() as conn:
-        await conn.execution_options(isolation_level="AUTOCOMMIT")
-        for sql_path in sql_files:
-            sql = sql_path.read_text()
-            # Strip line comments and split on semicolons
-            lines = [ln for ln in sql.splitlines() if not ln.strip().startswith("--")]
-            statements = [s.strip() for s in "\n".join(lines).split(";") if s.strip()]
-            for stmt in statements:
-                try:
+    # Each statement runs in its own transaction via engine.begin().
+    # This isolates failures: a skipped/failed DDL statement (e.g. a trigger that
+    # references a function not yet created) only rolls back that single statement
+    # and does NOT abort the entire migration run — which was the root cause of
+    # sentiment_score and user_profiles columns never being added in production.
+    for sql_path in sql_files:
+        sql = sql_path.read_text()
+        # Strip line comments and split on semicolons
+        lines = [ln for ln in sql.splitlines() if not ln.strip().startswith("--")]
+        statements = [s.strip() for s in "\n".join(lines).split(";") if s.strip()]
+        for stmt in statements:
+            try:
+                async with engine.begin() as conn:
                     await conn.execute(text(stmt))
-                except Exception as exc:
-                    logger.warning(
-                        "Migration stmt skipped (%s) in %s: %.120s",
-                        type(exc).__name__,
-                        sql_path.name,
-                        stmt[:120],
-                    )
-            logger.info("Applied migration: %s", sql_path.name)
+            except Exception as exc:
+                logger.warning(
+                    "Migration stmt skipped (%s) in %s: %.120s",
+                    type(exc).__name__,
+                    sql_path.name,
+                    stmt[:120],
+                )
+        logger.info("Applied migration: %s", sql_path.name)
 
     logger.info("Database migrations complete (%d file(s))", len(sql_files))
 
