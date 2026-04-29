@@ -78,6 +78,14 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "GCP_LOCATION"
         value = var.region
       }
+      env {
+        name  = "GEMINI_FLASH_MODEL"
+        value = "gemini-2.5-flash"
+      }
+      env {
+        name  = "GEMINI_PRO_MODEL"
+        value = "gemini-2.5-pro"
+      }
     }
   }
 
