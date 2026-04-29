@@ -16,6 +16,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { test as authTest } from "./fixtures";
 
 // These tests must run without an authenticated session.
 // The playwright.config.ts `storageState` sets up auth for most tests;
@@ -125,6 +126,31 @@ test.describe("Sign-in redirect_url", () => {
     await page.goto("/sign-in?redirect_url=%2Fdashboard%3Fupgrade%3Dsuccess");
     await expect(page).toHaveURL(/sign-in/, { timeout: 8_000 });
   });
+});
+
+// ── Authenticated redirect from sign-in ───────────────────────────────────
+// Uses the authenticated fixture (storageState + Clerk testing token).
+
+authTest.describe("Authenticated user visiting sign-in", () => {
+  authTest(
+    "redirects to /dashboard when no redirect_url is present",
+    async ({ page }) => {
+      await page.goto("/sign-in");
+      await expect(page).not.toHaveURL(/sign-in/, { timeout: 8_000 });
+      await expect(page).toHaveURL(/dashboard/, { timeout: 8_000 });
+    },
+  );
+
+  authTest(
+    "redirects to redirect_url destination after Stripe payment",
+    async ({ page }) => {
+      const redirectTarget = "/dashboard?upgrade=success&plan=annual";
+      await page.goto(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`);
+      // Should be sent straight to the dashboard with the upgrade params — never show the form
+      await expect(page).not.toHaveURL(/sign-in/, { timeout: 8_000 });
+      await expect(page).toHaveURL(/dashboard.*upgrade=success/, { timeout: 8_000 });
+    },
+  );
 });
 
 

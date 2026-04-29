@@ -1,9 +1,9 @@
 "use client";
 
-import { useSignIn } from "@clerk/nextjs";
+import { useAuth, useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import Link from "next/link";
 import { AuthCard } from "./AuthCard";
 import { AuthInput } from "./AuthInput";
@@ -28,9 +28,19 @@ function getSafeRedirect(searchParams: ReturnType<typeof useSearchParams>, fallb
 }
 
 export function SignInForm() {
+  const { isSignedIn } = useAuth();
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Already authenticated — skip the form and go straight to the redirect target.
+  // This handles the case where Stripe (or any external redirect) sends the user
+  // back through /sign-in?redirect_url=... even though they're still logged in.
+  useEffect(() => {
+    if (isSignedIn) {
+      router.replace(getSafeRedirect(searchParams));
+    }
+  }, [isSignedIn, router, searchParams]);
 
   const [step, setStep] = useState<Step>("identifier");
   const [email, setEmail] = useState("");
