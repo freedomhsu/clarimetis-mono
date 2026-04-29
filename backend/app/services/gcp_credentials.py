@@ -16,7 +16,6 @@ import base64
 import json
 import logging
 import os
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +57,14 @@ def get_gcp_credentials():
     return None
 
 
-@lru_cache(maxsize=1)
 def init_vertexai() -> None:
-    """Initialize the VertexAI SDK once per process.
+    """Initialize the VertexAI SDK.
 
-    Decorated with ``@lru_cache`` so subsequent calls are no-ops.
-    Services should call this at the top of any function that uses VertexAI
-    models rather than at module import time, keeping imports side-effect-free.
+    Called at the start of every Vertex AI request so the SDK re-establishes
+    its gRPC transport if the connection went stale (common in Cloud Run when
+    an instance idles but is not scaled to zero).  vertexai.init() is
+    idempotent and very fast — it just sets config and does not open
+    connections — so the cost of calling it on each request is negligible.
     """
     import vertexai  # local import to avoid pulling vertexai into every module
 
