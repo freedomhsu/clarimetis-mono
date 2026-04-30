@@ -24,7 +24,7 @@ export function MessageBubble({ message }: Props) {
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? "bg-gradient-to-b from-[#713f12] to-[#2e1008] border border-amber-700/20 text-amber-50 rounded-br-sm"
+              ? "bg-gradient-to-b from-teal-600 to-teal-900 border border-teal-500/20 text-white rounded-br-sm"
               : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] text-zinc-800 dark:text-zinc-100 rounded-bl-sm"
           }`}
         >

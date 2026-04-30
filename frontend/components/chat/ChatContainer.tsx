@@ -139,8 +139,8 @@ export function ChatContainer({ initialSessionId }: Props) {
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 bg-zinc-50 dark:bg-[#0a0a0a]">
-            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-[#1c0900] border border-amber-200/50 dark:border-amber-900/30 flex items-center justify-center">
-              <MessageCircle size={24} className="text-amber-800 dark:text-amber-500" />
+            <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950 border border-teal-200/50 dark:border-teal-800/30 flex items-center justify-center">
+              <MessageCircle size={24} className="text-teal-700 dark:text-teal-400" />
             </div>
             <div>
               <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">No session selected</p>

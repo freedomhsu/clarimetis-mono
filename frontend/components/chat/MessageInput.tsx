@@ -81,7 +81,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
       <div
         className={`relative rounded-2xl border transition-all duration-150 ${
           focused
-            ? "border-amber-400 dark:border-amber-800/60 shadow-[0_0_0_3px_rgba(180,83,9,0.08)] dark:shadow-[0_0_0_3px_rgba(120,53,15,0.20)]"
+            ? "border-teal-400 dark:border-teal-700/60 shadow-[0_0_0_3px_rgba(20,184,166,0.12)] dark:shadow-[0_0_0_3px_rgba(20,184,166,0.15)]"
             : "border-zinc-200 dark:border-white/[0.06]"
         } bg-zinc-50 dark:bg-zinc-900`}
       >
@@ -139,7 +139,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
               aria-label="Send message"
               className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 ${
                 canSend
-                  ? "text-amber-50 bg-amber-800 hover:bg-amber-900 dark:bg-gradient-to-b dark:from-[#713f12] dark:to-[#2e1008] dark:hover:from-[#854d0e] dark:hover:to-[#3d1509] border border-amber-700/30 dark:border-white/10 shadow-sm scale-100 hover:scale-105"
+                  ? "text-white bg-teal-600 hover:bg-teal-700 dark:bg-gradient-to-b dark:from-teal-600 dark:to-teal-900 dark:hover:from-teal-500 dark:hover:to-teal-800 border border-teal-500/30 dark:border-white/10 shadow-sm scale-100 hover:scale-105"
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-300 dark:text-zinc-600 cursor-not-allowed"
               }`}
             >
