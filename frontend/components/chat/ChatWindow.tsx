@@ -22,36 +22,12 @@ import { useDashboard } from "@/components/providers/DashboardContext";
 import { api, type Message, type SubscriptionError } from "@/lib/api";
 
 const trustSignals = [
-  {
-    icon: ShieldCheck,
-    label: "Secure",
-    iconColor: "text-stone-500 dark:text-stone-400",
-  },
-  {
-    icon: Fingerprint,
-    label: "Personalized",
-    iconColor: "text-stone-500 dark:text-stone-400",
-  },
-  {
-    icon: Brain,
-    label: "Cognitive insights",
-    iconColor: "text-stone-500 dark:text-stone-400",
-  },
-  {
-    icon: Globe,
-    label: "Any language",
-    iconColor: "text-stone-500 dark:text-stone-400",
-  },
-  {
-    icon: HeartHandshake,
-    label: "Crisis-aware",
-    iconColor: "text-stone-500 dark:text-stone-400",
-  },
-  {
-    icon: Zap,
-    label: "Always on",
-    iconColor: "text-stone-500 dark:text-stone-400",
-  },
+  { icon: ShieldCheck,   label: "Secure" },
+  { icon: Fingerprint,   label: "Personalized" },
+  { icon: Brain,         label: "Cognitive insights" },
+  { icon: Globe,         label: "Any language" },
+  { icon: HeartHandshake,label: "Crisis-aware" },
+  { icon: Zap,           label: "Always on" },
 ];
 
 const starterPrompts = [
@@ -64,13 +40,13 @@ const starterPrompts = [
 function ThinkingIndicator({ status }: { status: string }) {
   return (
     <div className="flex justify-start mb-4">
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2 min-w-[200px] shadow-sm">
+      <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2 min-w-[200px]">
         <span className="flex gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:300ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-600 animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-600 animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-600 animate-bounce [animation-delay:300ms]" />
         </span>
-        <span className="text-xs text-stone-400 dark:text-stone-500">
+        <span className="text-xs text-zinc-400 dark:text-zinc-500">
           {status || "Thinking…"}
         </span>
       </div>
@@ -205,35 +181,35 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
     <div className="flex flex-col h-full">
 
       {/* ── Persistent header ── */}
-      <div className="shrink-0 border-b border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-950 px-4 py-3">
+      <div className="shrink-0 border-b border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-zinc-950 px-4 py-3">
         {/* Session title row */}
         <div className="flex items-center gap-2 mb-2.5">
-          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-            <MessageCircle size={14} className="text-amber-700 dark:text-amber-400" />
+          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-[#1c0900] border border-amber-200/50 dark:border-amber-900/30 flex items-center justify-center shrink-0">
+            <MessageCircle size={14} className="text-amber-800 dark:text-amber-500" />
           </div>
-          <span className="text-sm font-semibold text-stone-800 dark:text-stone-100 truncate">
+          <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
             {sessionTitle || "Coaching Session"}
           </span>
           {tier === "free" && (
-            <span className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[10px] font-medium text-stone-500 dark:text-stone-400">
+            <span className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 text-[10px] font-medium text-zinc-500 dark:text-zinc-500">
               <Lock size={8} />
               Free · 5/day
             </span>
           )}
-          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[10px] font-medium text-stone-500 dark:text-stone-400">
+          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 text-[10px] font-medium text-zinc-500 dark:text-zinc-500">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Live
           </span>
         </div>
 
-        {/* Trust signal pills — muted, quality feel */}
+        {/* Trust signal pills */}
         <div className="flex gap-1.5 flex-wrap">
-          {trustSignals.map(({ icon: Icon, label, iconColor }) => (
+          {trustSignals.map(({ icon: Icon, label }) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[10px] font-medium text-stone-500 dark:text-stone-400"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.05] text-[10px] font-medium text-zinc-400 dark:text-zinc-600"
             >
-              <Icon size={9} className={iconColor} />
+              <Icon size={9} className="text-zinc-400 dark:text-zinc-600" />
               {label}
             </span>
           ))}
@@ -241,17 +217,17 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
       </div>
 
       {/* ── Messages area ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-stone-50 dark:bg-stone-950">
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-zinc-50 dark:bg-[#0a0a0a]">
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-8 px-4 max-w-md mx-auto">
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
-                <Brain size={24} className="text-amber-700 dark:text-amber-400" />
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-[#1c0900] border border-amber-200/50 dark:border-amber-900/30 flex items-center justify-center mx-auto mb-4">
+                <Brain size={24} className="text-amber-800 dark:text-amber-500" />
               </div>
-              <p className="text-base font-semibold text-stone-700 dark:text-stone-200">
+              <p className="text-base font-semibold text-zinc-700 dark:text-zinc-200">
                 How are you doing today?
               </p>
-              <p className="text-sm text-stone-400 dark:text-stone-500 mt-1">
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
                 Share what&apos;s on your mind — I&apos;m here to listen and help.
               </p>
             </div>
@@ -262,9 +238,9 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
                 <button
                   key={text}
                   onClick={() => sendMessage(text)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-left text-stone-500 dark:text-stone-400 hover:border-amber-300 dark:hover:border-amber-700 hover:text-stone-700 dark:hover:text-stone-200 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-xl text-sm text-left text-zinc-500 dark:text-zinc-400 hover:border-amber-300 dark:hover:border-[#3d1a00]/80 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                 >
-                  <Icon size={14} className="text-amber-600 dark:text-amber-500 shrink-0" />
+                  <Icon size={14} className="text-amber-700 dark:text-amber-600 shrink-0" />
                   {text}
                 </button>
               ))}

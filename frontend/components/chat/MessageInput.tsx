@@ -52,7 +52,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
   };
 
   return (
-    <div className="bg-stone-50 dark:bg-stone-950 border-t border-stone-200/60 dark:border-stone-800 px-4 pt-2 pb-3">
+    <div className="bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-white/[0.06] px-4 pt-2 pb-3">
       {/* Pending media previews */}
       {pendingMedia.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2 px-1">
@@ -81,9 +81,9 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
       <div
         className={`relative rounded-2xl border transition-all duration-150 ${
           focused
-            ? "border-amber-300 dark:border-amber-700 shadow-[0_0_0_3px_rgba(217,119,6,0.10)]"
-            : "border-stone-200 dark:border-stone-700"
-        } bg-white dark:bg-stone-900`}
+            ? "border-amber-400 dark:border-amber-800/60 shadow-[0_0_0_3px_rgba(180,83,9,0.08)] dark:shadow-[0_0_0_3px_rgba(120,53,15,0.20)]"
+            : "border-zinc-200 dark:border-white/[0.06]"
+        } bg-zinc-50 dark:bg-zinc-900`}
       >
         {/* Textarea */}
         <textarea
@@ -97,7 +97,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
           placeholder="Share what's on your mind…"
           disabled={disabled}
           rows={1}
-          className="w-full bg-transparent resize-none outline-none text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 px-4 pt-3.5 pb-2 min-h-[48px] max-h-36 leading-relaxed"
+          className="w-full bg-transparent resize-none outline-none text-sm text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 px-4 pt-3.5 pb-2 min-h-[48px] max-h-36 leading-relaxed"
         />
 
         {/* Bottom toolbar */}
@@ -139,8 +139,8 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
               aria-label="Send message"
               className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 ${
                 canSend
-                  ? "bg-amber-700 hover:bg-amber-800 dark:bg-amber-800 dark:hover:bg-amber-700 text-white shadow-sm scale-100 hover:scale-105"
-                  : "bg-stone-100 dark:bg-stone-800 text-stone-300 dark:text-stone-600 cursor-not-allowed"
+                  ? "text-amber-50 bg-amber-800 hover:bg-amber-900 dark:bg-gradient-to-b dark:from-[#713f12] dark:to-[#2e1008] dark:hover:from-[#854d0e] dark:hover:to-[#3d1509] border border-amber-700/30 dark:border-white/10 shadow-sm scale-100 hover:scale-105"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-300 dark:text-zinc-600 cursor-not-allowed"
               }`}
             >
               <ArrowUp size={15} strokeWidth={2.5} />

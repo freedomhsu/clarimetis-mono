@@ -72,17 +72,17 @@ export function SessionList({
   const cancelEdit = () => setEditingId(null);
 
   return (
-    <div className="w-64 shrink-0 border-r border-stone-200/80 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 flex flex-col h-full">
+    <div className="w-64 shrink-0 border-r border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-zinc-950 flex flex-col h-full">
 
       {/* ── Header ── */}
-      <div className="px-4 pt-5 pb-4 border-b border-stone-200/60 dark:border-stone-800 space-y-3">
+      <div className="px-4 pt-5 pb-4 border-b border-zinc-200 dark:border-white/[0.06] space-y-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-            <MessageCircle size={15} className="text-amber-700 dark:text-amber-400" />
+          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-[#1c0900] border border-amber-200/60 dark:border-amber-900/30 flex items-center justify-center shrink-0">
+            <MessageCircle size={15} className="text-amber-800 dark:text-amber-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-tight">Sessions</p>
-            <p className="text-[10px] text-stone-400 dark:text-stone-500">
+            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 leading-tight">Sessions</p>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-600">
               {sessions.length} conversation{sessions.length !== 1 ? "s" : ""}
             </p>
           </div>
@@ -90,7 +90,7 @@ export function SessionList({
 
         <button
           onClick={onCreate}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-700 dark:bg-amber-800 text-white rounded-lg text-xs font-medium hover:bg-amber-800 dark:hover:bg-amber-700 active:scale-[0.98] transition-all"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium active:scale-[0.98] transition-all text-amber-50 bg-amber-800 hover:bg-amber-900 dark:bg-gradient-to-b dark:from-[#713f12] dark:to-[#2e1008] dark:hover:from-[#854d0e] dark:hover:to-[#3d1509] border border-amber-700/30 dark:border-white/10"
         >
           <Plus size={13} />
           New Session
@@ -100,14 +100,14 @@ export function SessionList({
           <div className="relative">
             <Search
               size={11}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400"
             />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search…"
-              className="w-full pl-7 pr-3 py-1.5 text-xs bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-700 dark:text-stone-300 placeholder-stone-400 dark:placeholder-stone-600 outline-none focus:ring-1 focus:ring-amber-400 dark:focus:ring-amber-600 transition"
+              className="w-full pl-7 pr-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-lg text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-600 outline-none focus:ring-1 focus:ring-amber-500/40 dark:focus:ring-amber-700/40 transition"
             />
           </div>
         )}
@@ -117,12 +117,12 @@ export function SessionList({
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         {sessions.length === 0 && (
           <div className="flex flex-col items-center gap-3 mt-10 px-4 text-center">
-            <div className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 flex items-center justify-center">
-              <MessageCircle size={18} className="text-stone-300 dark:text-stone-600" />
+            <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 flex items-center justify-center">
+              <MessageCircle size={18} className="text-zinc-300 dark:text-zinc-700" />
             </div>
             <div>
-              <p className="text-xs font-medium text-stone-500 dark:text-stone-400">No sessions yet</p>
-              <p className="text-[11px] text-stone-400 dark:text-stone-600 mt-0.5 leading-relaxed">
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">No sessions yet</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-600 mt-0.5 leading-relaxed">
                 Start a new session to begin.
               </p>
             </div>
@@ -130,7 +130,7 @@ export function SessionList({
         )}
 
         {sessions.length > 0 && filtered.length === 0 && (
-          <p className="text-xs text-stone-400 dark:text-stone-600 text-center mt-6 px-3">
+          <p className="text-xs text-zinc-400 dark:text-zinc-600 text-center mt-6 px-3">
             No results for &ldquo;{query}&rdquo;
           </p>
         )}
@@ -145,13 +145,13 @@ export function SessionList({
               onClick={() => !isEditing && onSelect(session.id)}
               className={`group relative flex items-start gap-2 rounded-lg px-2.5 py-2.5 cursor-pointer transition-all ${
                 isActive
-                  ? "bg-white dark:bg-stone-900 shadow-sm border border-stone-200 dark:border-stone-700"
-                  : "border border-transparent hover:bg-white dark:hover:bg-stone-900/60 hover:border-stone-200/60 dark:hover:border-stone-800"
+                  ? "bg-amber-50 dark:bg-[#130800] border border-amber-200 dark:border-[#3d1a00]/60 shadow-sm"
+                  : "border border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-900/70 hover:border-zinc-200 dark:hover:border-white/[0.05]"
               }`}
             >
               {/* Active indicator bar */}
               {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-amber-500 dark:bg-amber-400" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-amber-600" />
               )}
 
               <div className="flex-1 min-w-0 pl-1">
@@ -165,19 +165,19 @@ export function SessionList({
                         if (e.key === "Enter") commitEdit(session.id);
                         if (e.key === "Escape") cancelEdit();
                       }}
-                      className="flex-1 min-w-0 text-xs font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded px-1.5 py-0.5 text-stone-800 dark:text-stone-100 outline-none focus:ring-1 focus:ring-amber-400"
+                      className="flex-1 min-w-0 text-xs font-medium bg-amber-50 dark:bg-[#1c0900] border border-amber-300 dark:border-amber-800/60 rounded px-1.5 py-0.5 text-zinc-800 dark:text-zinc-100 outline-none focus:ring-1 focus:ring-amber-500/40"
                       autoFocus
                     />
                     <button
                       onClick={() => commitEdit(session.id)}
-                      className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 shrink-0"
+                      className="text-amber-700 dark:text-amber-500 hover:text-amber-800 dark:hover:text-amber-400 shrink-0"
                       aria-label="Save"
                     >
                       <Check size={12} />
                     </button>
                     <button
                       onClick={cancelEdit}
-                      className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 shrink-0"
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 shrink-0"
                       aria-label="Cancel"
                     >
                       <X size={12} />
@@ -187,8 +187,8 @@ export function SessionList({
                   <p
                     className={`text-xs font-medium truncate leading-snug ${
                       isActive
-                        ? "text-stone-800 dark:text-stone-100"
-                        : "text-stone-600 dark:text-stone-300"
+                        ? "text-amber-900 dark:text-amber-200"
+                        : "text-zinc-600 dark:text-zinc-400"
                     }`}
                   >
                     {session.title}
@@ -196,8 +196,8 @@ export function SessionList({
                 )}
                 {!isEditing && (
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Clock size={9} className="text-stone-300 dark:text-stone-600 shrink-0" />
-                    <span className="text-[10px] text-stone-400 dark:text-stone-500">
+                    <Clock size={9} className="text-zinc-300 dark:text-zinc-700 shrink-0" />
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-600">
                       {relativeTime(session.updated_at)}
                     </span>
                   </div>
@@ -216,14 +216,14 @@ export function SessionList({
                 >
                   <button
                     onClick={() => startEdit(session)}
-                    className="p-1 rounded text-stone-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                    className="p-1 rounded text-zinc-400 hover:text-amber-700 dark:hover:text-amber-500 hover:bg-amber-100 dark:hover:bg-[#1c0900] transition-colors"
                     aria-label="Rename session"
                   >
                     <Pencil size={11} />
                   </button>
                   <button
                     onClick={() => onDelete(session.id)}
-                    className="p-1 rounded text-stone-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="p-1 rounded text-zinc-400 hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                     aria-label="Delete session"
                   >
                     <Trash2 size={11} />
@@ -236,29 +236,34 @@ export function SessionList({
       </div>
 
       {/* ── Footer ── */}
-      <div className="px-4 py-3 border-t border-stone-200/60 dark:border-stone-800">
+      <div className="px-4 py-3 border-t border-zinc-200 dark:border-white/[0.06]">
         {tier === "free" ? (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium text-stone-500 dark:text-stone-400">
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-500">
                 Free plan · 5 messages/day
               </span>
-              <span className="text-[9px] text-stone-400 dark:text-stone-600">resets midnight</span>
+              <span className="text-[9px] text-zinc-400 dark:text-zinc-700">resets midnight</span>
             </div>
-            <div className="w-full bg-stone-200 dark:bg-stone-800 rounded-full h-0.5">
-              <div className="bg-amber-400 dark:bg-amber-600 h-0.5 rounded-full w-0" />
+            <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-0.5">
+              <div className="bg-amber-500 dark:bg-amber-700 h-0.5 rounded-full w-0" />
             </div>
             <a
               href="/dashboard"
-              className="block text-center text-[10px] font-medium text-amber-700 dark:text-amber-400 hover:underline"
+              className="block text-center text-[10px] font-medium text-amber-700 dark:text-amber-500 hover:underline"
             >
               Upgrade to Pro — unlimited messages ↗
             </a>
           </div>
         ) : (
-          <p className="text-[10px] text-stone-400 dark:text-stone-600 text-center leading-relaxed">
-            Each session has its own memory &amp; context
-          </p>
+          <div className="text-center space-y-0.5">
+            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-500">
+              Pro plan · Unlimited
+            </p>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-600">
+              All features unlocked
+            </p>
+          </div>
         )}
       </div>
     </div>

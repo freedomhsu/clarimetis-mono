@@ -138,13 +138,13 @@ export function ChatContainer({ initialSessionId }: Props) {
             tier={tier}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 bg-stone-50 dark:bg-stone-950">
-            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <MessageCircle size={24} className="text-amber-700 dark:text-amber-400" />
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 bg-zinc-50 dark:bg-[#0a0a0a]">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-[#1c0900] border border-amber-200/50 dark:border-amber-900/30 flex items-center justify-center">
+              <MessageCircle size={24} className="text-amber-800 dark:text-amber-500" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">No session selected</p>
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Pick a session from the list or start a new one.</p>
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">No session selected</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">Pick a session from the list or start a new one.</p>
             </div>
           </div>
         )}
