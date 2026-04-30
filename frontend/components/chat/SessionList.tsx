@@ -77,8 +77,8 @@ export function SessionList({
       {/* ── Header ── */}
       <div className="px-4 pt-5 pb-4 border-b border-zinc-200 dark:border-white/[0.06] space-y-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-[#1c0900] border border-amber-200/60 dark:border-amber-900/30 flex items-center justify-center shrink-0">
-            <MessageCircle size={15} className="text-amber-800 dark:text-amber-500" />
+          <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 border border-teal-200/60 dark:border-teal-800/30 flex items-center justify-center shrink-0">
+            <MessageCircle size={15} className="text-teal-700 dark:text-teal-400" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 leading-tight">Sessions</p>
@@ -90,7 +90,7 @@ export function SessionList({
 
         <button
           onClick={onCreate}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium active:scale-[0.98] transition-all text-amber-50 bg-amber-800 hover:bg-amber-900 dark:bg-gradient-to-b dark:from-[#713f12] dark:to-[#2e1008] dark:hover:from-[#854d0e] dark:hover:to-[#3d1509] border border-amber-700/30 dark:border-white/10"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium active:scale-[0.98] transition-all text-white bg-teal-600 hover:bg-teal-700 dark:bg-gradient-to-b dark:from-teal-600 dark:to-teal-900 dark:hover:from-teal-500 dark:hover:to-teal-800 border border-teal-500/30 dark:border-white/10"
         >
           <Plus size={13} />
           New Session
@@ -107,7 +107,7 @@ export function SessionList({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search…"
-              className="w-full pl-7 pr-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-lg text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-600 outline-none focus:ring-1 focus:ring-amber-500/40 dark:focus:ring-amber-700/40 transition"
+              className="w-full pl-7 pr-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-lg text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-600 outline-none focus:ring-1 focus:ring-teal-500/40 dark:focus:ring-teal-700/40 transition"
             />
           </div>
         )}
@@ -145,13 +145,13 @@ export function SessionList({
               onClick={() => !isEditing && onSelect(session.id)}
               className={`group relative flex items-start gap-2 rounded-lg px-2.5 py-2.5 cursor-pointer transition-all ${
                 isActive
-                  ? "bg-amber-50 dark:bg-[#130800] border border-amber-200 dark:border-[#3d1a00]/60 shadow-sm"
+                  ? "bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800/50 shadow-sm"
                   : "border border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-900/70 hover:border-zinc-200 dark:hover:border-white/[0.05]"
               }`}
             >
               {/* Active indicator bar */}
               {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-amber-600" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-teal-500" />
               )}
 
               <div className="flex-1 min-w-0 pl-1">
@@ -165,12 +165,12 @@ export function SessionList({
                         if (e.key === "Enter") commitEdit(session.id);
                         if (e.key === "Escape") cancelEdit();
                       }}
-                      className="flex-1 min-w-0 text-xs font-medium bg-amber-50 dark:bg-[#1c0900] border border-amber-300 dark:border-amber-800/60 rounded px-1.5 py-0.5 text-zinc-800 dark:text-zinc-100 outline-none focus:ring-1 focus:ring-amber-500/40"
+                      className="flex-1 min-w-0 text-xs font-medium bg-teal-50 dark:bg-teal-950 border border-teal-300 dark:border-teal-700/60 rounded px-1.5 py-0.5 text-zinc-800 dark:text-zinc-100 outline-none focus:ring-1 focus:ring-teal-500/40"
                       autoFocus
                     />
                     <button
                       onClick={() => commitEdit(session.id)}
-                      className="text-amber-700 dark:text-amber-500 hover:text-amber-800 dark:hover:text-amber-400 shrink-0"
+                      className="text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 shrink-0"
                       aria-label="Save"
                     >
                       <Check size={12} />
@@ -187,7 +187,7 @@ export function SessionList({
                   <p
                     className={`text-xs font-medium truncate leading-snug ${
                       isActive
-                        ? "text-amber-900 dark:text-amber-200"
+                        ? "text-teal-900 dark:text-teal-200"
                         : "text-zinc-600 dark:text-zinc-400"
                     }`}
                   >
@@ -216,7 +216,7 @@ export function SessionList({
                 >
                   <button
                     onClick={() => startEdit(session)}
-                    className="p-1 rounded text-zinc-400 hover:text-amber-700 dark:hover:text-amber-500 hover:bg-amber-100 dark:hover:bg-[#1c0900] transition-colors"
+                    className="p-1 rounded text-zinc-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950 transition-colors"
                     aria-label="Rename session"
                   >
                     <Pencil size={11} />
@@ -246,23 +246,38 @@ export function SessionList({
               <span className="text-[9px] text-zinc-400 dark:text-zinc-700">resets midnight</span>
             </div>
             <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-0.5">
-              <div className="bg-amber-500 dark:bg-amber-700 h-0.5 rounded-full w-0" />
+              <div className="bg-teal-500 dark:bg-teal-600 h-0.5 rounded-full w-0" />
             </div>
             <a
               href="/dashboard"
-              className="block text-center text-[10px] font-medium text-amber-700 dark:text-amber-500 hover:underline"
+              className="block text-center text-[10px] font-medium text-teal-600 dark:text-teal-400 hover:underline"
             >
               Upgrade to Pro — unlimited messages ↗
             </a>
           </div>
         ) : (
-          <div className="text-center space-y-0.5">
-            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-500">
-              Pro plan · Unlimited
-            </p>
-            <p className="text-[10px] text-zinc-400 dark:text-zinc-600">
-              All features unlocked
-            </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse shrink-0" />
+              <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400">Pro plan · Active</p>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {[
+                "Unlimited messages",
+                "Voice notes",
+                "Photo & video uploads",
+                "Memory & insights",
+                "Crisis detection",
+                "Priority support",
+              ].map((feature) => (
+                <div key={feature} className="flex items-center gap-1 min-w-0">
+                  <svg className="w-2.5 h-2.5 text-teal-500 shrink-0" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400 leading-tight truncate">{feature}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

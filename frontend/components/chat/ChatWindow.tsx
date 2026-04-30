@@ -42,9 +42,9 @@ function ThinkingIndicator({ status }: { status: string }) {
     <div className="flex justify-start mb-4">
       <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2 min-w-[200px]">
         <span className="flex gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-600 animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-600 animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-600 animate-bounce [animation-delay:300ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce [animation-delay:300ms]" />
         </span>
         <span className="text-xs text-zinc-400 dark:text-zinc-500">
           {status || "Thinking…"}
@@ -184,8 +184,8 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
       <div className="shrink-0 border-b border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-zinc-950 px-4 py-3">
         {/* Session title row */}
         <div className="flex items-center gap-2 mb-2.5">
-          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-[#1c0900] border border-amber-200/50 dark:border-amber-900/30 flex items-center justify-center shrink-0">
-            <MessageCircle size={14} className="text-amber-800 dark:text-amber-500" />
+          <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950 border border-teal-200/50 dark:border-teal-800/30 flex items-center justify-center shrink-0">
+            <MessageCircle size={14} className="text-teal-700 dark:text-teal-400" />
           </div>
           <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
             {sessionTitle || "Coaching Session"}
@@ -221,8 +221,8 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-8 px-4 max-w-md mx-auto">
             <div>
-              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-[#1c0900] border border-amber-200/50 dark:border-amber-900/30 flex items-center justify-center mx-auto mb-4">
-                <Brain size={24} className="text-amber-800 dark:text-amber-500" />
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950 border border-teal-200/50 dark:border-teal-800/30 flex items-center justify-center mx-auto mb-4">
+                <Brain size={24} className="text-teal-700 dark:text-teal-400" />
               </div>
               <p className="text-base font-semibold text-zinc-700 dark:text-zinc-200">
                 How are you doing today?
@@ -238,9 +238,9 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
                 <button
                   key={text}
                   onClick={() => sendMessage(text)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-xl text-sm text-left text-zinc-500 dark:text-zinc-400 hover:border-amber-300 dark:hover:border-[#3d1a00]/80 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-xl text-sm text-left text-zinc-500 dark:text-zinc-400 hover:border-teal-300 dark:hover:border-teal-700/60 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                 >
-                  <Icon size={14} className="text-amber-700 dark:text-amber-600 shrink-0" />
+                  <Icon size={14} className="text-teal-600 dark:text-teal-500 shrink-0" />
                   {text}
                 </button>
               ))}
