@@ -8,7 +8,7 @@ from app.database import get_db
 from app.middleware.auth import get_current_user_id
 from app.models.session import ChatSession
 from app.models.user import User
-from app.schemas.chat import SessionCreate, SessionOut
+from app.schemas.chat import SessionCreate, SessionOut, SessionRename
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -48,6 +48,29 @@ async def create_session(
     user = await _require_user(clerk_user_id, db)
     session = ChatSession(user_id=user.id, title=body.title)
     db.add(session)
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+@router.patch("/{session_id}", response_model=SessionOut)
+async def rename_session(
+    session_id: uuid.UUID,
+    body: SessionRename,
+    clerk_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> ChatSession:
+    user = await _require_user(clerk_user_id, db)
+    result = await db.execute(
+        select(ChatSession).where(
+            ChatSession.id == session_id,
+            ChatSession.user_id == user.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    session.title = body.title.strip()[:255]
     await db.commit()
     await db.refresh(session)
     return session

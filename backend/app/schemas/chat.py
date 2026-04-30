@@ -8,6 +8,10 @@ class SessionCreate(BaseModel):
     title: str = Field(default="New Session", max_length=200)
 
 
+class SessionRename(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
 class SessionOut(BaseModel):
     id: uuid.UUID
     title: str

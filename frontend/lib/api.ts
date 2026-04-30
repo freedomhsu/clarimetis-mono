@@ -159,8 +159,14 @@ export const api = {
     });
   },
 
-  async deleteSession(token: string, sessionId: string): Promise<void> {
-    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
+  async renameSession(token: string, sessionId: string, title: string): Promise<Session> {
+    return request(`/api/v1/sessions/${sessionId}`, token, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    });
+  },
+
+  async deleteSession(token: string, sessionId: string): Promise<void> {    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
     const res = await fetch(`${baseUrl}/api/v1/sessions/${sessionId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
