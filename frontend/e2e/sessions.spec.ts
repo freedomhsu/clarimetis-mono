@@ -177,7 +177,7 @@ test.describe("Session management — mocked", () => {
     });
 
     await page.goto("/chat");
-    await expect(page.getByText("2 sessions")).toBeVisible();
+    await expect(page.getByText("2 conversations")).toBeVisible();
   });
 
   test("error creating session shows an error message", async ({ page }) => {

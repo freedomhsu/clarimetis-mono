@@ -102,6 +102,17 @@ export function ChatContainer({ initialSessionId }: Props) {
     }
   };
 
+  const handleRename = async (sessionId: string, title: string) => {
+    const token = await getToken();
+    if (!token) return;
+    try {
+      const updated = await api.renameSession(token, sessionId, title);
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, title: updated.title } : s)));
+    } catch {
+      setActionError("Failed to rename session. Please try again.");
+    }
+  };
+
   return (
     <div className="flex h-full">
       <SessionList
@@ -110,6 +121,7 @@ export function ChatContainer({ initialSessionId }: Props) {
         onSelect={handleSelect}
         onCreate={handleCreate}
         onDelete={handleDelete}
+        onRename={handleRename}
         tier={tier}
       />
 
@@ -121,19 +133,18 @@ export function ChatContainer({ initialSessionId }: Props) {
         )}
         {activeSessionId ? (
           <ChatWindow
-            key={activeSessionId}
             sessionId={activeSessionId}
             sessionTitle={sessions.find((s) => s.id === activeSessionId)?.title}
             tier={tier}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-200 dark:shadow-brand-900/30">
-              <MessageCircle size={28} className="text-white" />
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 bg-stone-50 dark:bg-stone-950">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <MessageCircle size={24} className="text-amber-700 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-base font-semibold text-gray-700 dark:text-gray-200">No session selected</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Pick a session from the list or start a new one.</p>
+              <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">No session selected</p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Pick a session from the list or start a new one.</p>
             </div>
           </div>
         )}

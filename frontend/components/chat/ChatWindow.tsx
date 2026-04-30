@@ -24,45 +24,33 @@ import { api, type Message, type SubscriptionError } from "@/lib/api";
 const trustSignals = [
   {
     icon: ShieldCheck,
-    label: "End-to-end secure",
-    iconColor: "text-emerald-600 dark:text-emerald-300",
-    bg: "bg-emerald-50 dark:bg-emerald-900/40",
-    border: "border-emerald-200 dark:border-emerald-700",
+    label: "Secure",
+    iconColor: "text-stone-500 dark:text-stone-400",
   },
   {
     icon: Fingerprint,
-    label: "Personalized memory",
-    iconColor: "text-violet-600 dark:text-violet-300",
-    bg: "bg-violet-50 dark:bg-violet-900/40",
-    border: "border-violet-200 dark:border-violet-700",
+    label: "Personalized",
+    iconColor: "text-stone-500 dark:text-stone-400",
   },
   {
     icon: Brain,
     label: "Cognitive insights",
-    iconColor: "text-sky-600 dark:text-sky-300",
-    bg: "bg-sky-50 dark:bg-sky-900/40",
-    border: "border-sky-200 dark:border-sky-700",
+    iconColor: "text-stone-500 dark:text-stone-400",
   },
   {
     icon: Globe,
     label: "Any language",
-    iconColor: "text-teal-600 dark:text-teal-300",
-    bg: "bg-teal-50 dark:bg-teal-900/40",
-    border: "border-teal-200 dark:border-teal-700",
+    iconColor: "text-stone-500 dark:text-stone-400",
   },
   {
     icon: HeartHandshake,
     label: "Crisis-aware",
-    iconColor: "text-rose-600 dark:text-rose-300",
-    bg: "bg-rose-50 dark:bg-rose-900/40",
-    border: "border-rose-200 dark:border-rose-700",
+    iconColor: "text-stone-500 dark:text-stone-400",
   },
   {
     icon: Zap,
-    label: "Always available",
-    iconColor: "text-amber-600 dark:text-amber-300",
-    bg: "bg-amber-50 dark:bg-amber-900/40",
-    border: "border-amber-200 dark:border-amber-700",
+    label: "Always on",
+    iconColor: "text-stone-500 dark:text-stone-400",
   },
 ];
 
@@ -76,13 +64,13 @@ const starterPrompts = [
 function ThinkingIndicator({ status }: { status: string }) {
   return (
     <div className="flex justify-start mb-4">
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2 min-w-[220px]">
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2 min-w-[200px] shadow-sm">
         <span className="flex gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:300ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:300ms]" />
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-xs text-stone-400 dark:text-stone-500">
           {status || "Thinking…"}
         </span>
       </div>
@@ -217,53 +205,53 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
     <div className="flex flex-col h-full">
 
       {/* ── Persistent header ── */}
-      <div className="shrink-0 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+      <div className="shrink-0 border-b border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-950 px-4 py-3">
         {/* Session title row */}
         <div className="flex items-center gap-2 mb-2.5">
-          <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center shrink-0">
-            <MessageCircle size={14} className="text-white" />
+          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <MessageCircle size={14} className="text-amber-700 dark:text-amber-400" />
           </div>
-          <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+          <span className="text-sm font-semibold text-stone-800 dark:text-stone-100 truncate">
             {sessionTitle || "Coaching Session"}
           </span>
           {tier === "free" && (
-            <span className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-[11px] font-semibold text-amber-700 dark:text-amber-300 shadow-sm">
-              <Lock size={9} />
-              Free · 5 msg/day
+            <span className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[10px] font-medium text-stone-500 dark:text-stone-400">
+              <Lock size={8} />
+              Free · 5/day
             </span>
           )}
-          <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-[11px] font-semibold text-emerald-600 dark:text-emerald-300 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[10px] font-medium text-stone-500 dark:text-stone-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Live
           </span>
         </div>
 
-        {/* Trust signal pills — always visible */}
+        {/* Trust signal pills — muted, quality feel */}
         <div className="flex gap-1.5 flex-wrap">
-          {trustSignals.map(({ icon: Icon, label, iconColor, bg, border }) => (
+          {trustSignals.map(({ icon: Icon, label, iconColor }) => (
             <span
               key={label}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border shadow-sm ${bg} ${border}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-[10px] font-medium text-stone-500 dark:text-stone-400"
             >
-              <Icon size={10} className={iconColor} />
-              <span className={iconColor}>{label}</span>
+              <Icon size={9} className={iconColor} />
+              {label}
             </span>
           ))}
         </div>
       </div>
 
       {/* ── Messages area ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-stone-50 dark:bg-stone-950">
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-8 px-4 max-w-md mx-auto">
             <div>
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-200 dark:shadow-brand-900/30">
-                <Brain size={28} className="text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+                <Brain size={24} className="text-amber-700 dark:text-amber-400" />
               </div>
-              <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+              <p className="text-base font-semibold text-stone-700 dark:text-stone-200">
                 How are you doing today?
               </p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+              <p className="text-sm text-stone-400 dark:text-stone-500 mt-1">
                 Share what&apos;s on your mind — I&apos;m here to listen and help.
               </p>
             </div>
@@ -274,9 +262,9 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
                 <button
                   key={text}
                   onClick={() => sendMessage(text)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-left text-gray-600 dark:text-gray-300 hover:border-brand-400 dark:hover:border-brand-500 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-left text-stone-500 dark:text-stone-400 hover:border-amber-300 dark:hover:border-amber-700 hover:text-stone-700 dark:hover:text-stone-200 transition-colors"
                 >
-                  <Icon size={15} className="text-brand-500 shrink-0" />
+                  <Icon size={14} className="text-amber-600 dark:text-amber-500 shrink-0" />
                   {text}
                 </button>
               ))}
@@ -319,5 +307,6 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
           <MessageInput onSend={sendMessage} onStop={stopGeneration} isStreaming={isLoading} disabled={!clerkLoaded} onSubscriptionError={setSubscriptionError} />
         </div>
       )}
-    </div>  );
+    </div>
+  );
 }

@@ -52,7 +52,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 px-4 pt-2 pb-3">
+    <div className="bg-stone-50 dark:bg-stone-950 border-t border-stone-200/60 dark:border-stone-800 px-4 pt-2 pb-3">
       {/* Pending media previews */}
       {pendingMedia.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2 px-1">
@@ -81,9 +81,9 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
       <div
         className={`relative rounded-2xl border transition-all duration-150 ${
           focused
-            ? "border-brand-400 dark:border-brand-500 shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
-            : "border-gray-200 dark:border-gray-700"
-        } bg-gray-50 dark:bg-gray-800/60`}
+            ? "border-amber-300 dark:border-amber-700 shadow-[0_0_0_3px_rgba(217,119,6,0.10)]"
+            : "border-stone-200 dark:border-stone-700"
+        } bg-white dark:bg-stone-900`}
       >
         {/* Textarea */}
         <textarea
@@ -97,7 +97,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
           placeholder="Share what's on your mind…"
           disabled={disabled}
           rows={1}
-          className="w-full bg-transparent resize-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-4 pt-3.5 pb-2 min-h-[48px] max-h-36 leading-relaxed"
+          className="w-full bg-transparent resize-none outline-none text-sm text-stone-800 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 px-4 pt-3.5 pb-2 min-h-[48px] max-h-36 leading-relaxed"
         />
 
         {/* Bottom toolbar */}
@@ -139,8 +139,8 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
               aria-label="Send message"
               className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 ${
                 canSend
-                  ? "bg-brand-600 hover:bg-brand-700 text-white shadow-sm shadow-brand-200 dark:shadow-brand-900/30 scale-100 hover:scale-105"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                  ? "bg-amber-700 hover:bg-amber-800 dark:bg-amber-800 dark:hover:bg-amber-700 text-white shadow-sm scale-100 hover:scale-105"
+                  : "bg-stone-100 dark:bg-stone-800 text-stone-300 dark:text-stone-600 cursor-not-allowed"
               }`}
             >
               <ArrowUp size={15} strokeWidth={2.5} />

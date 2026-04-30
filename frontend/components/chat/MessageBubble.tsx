@@ -24,8 +24,8 @@ export function MessageBubble({ message }: Props) {
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? "bg-brand-600 text-white rounded-br-sm"
-              : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+              ? "bg-amber-800 dark:bg-amber-900 text-white rounded-br-sm"
+              : "bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-100 rounded-bl-sm shadow-sm"
           }`}
         >
           {isUser ? (
@@ -39,7 +39,7 @@ export function MessageBubble({ message }: Props) {
           )}
         </div>
 
-        <p className={`text-[10px] text-gray-400 dark:text-gray-600 px-1 ${isUser ? "text-right" : "text-left"}`}>
+        <p className={`text-[10px] text-stone-400 dark:text-stone-600 px-1 ${isUser ? "text-right" : "text-left"}`}>
           {formatTime(message.created_at)}
         </p>
 
