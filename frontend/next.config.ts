@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   turbopack: {},
   transpilePackages: ["@clerk/nextjs", "@clerk/clerk-react", "@clerk/shared"],
+  experimental: {
+    // Allow large file uploads through the /api/proxy route.
+    // Cloud Run's own limit is 32 MB; keep ours just under that.
+    serverBodySizeLimit: "30mb",
+  },
   images: {
     remotePatterns: [
       {
