@@ -23,7 +23,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --no-audit || npm install --no-audit || npm install
 
-# NEXT_PUBLIC_* vars are baked into the bundle at build time.
+COPY . .
 # Pass them via --build-arg in CI/CD (or docker build locally).
 # Note: NEXT_PUBLIC_API_URL is intentionally omitted — the browser now routes all
 # API calls through the Next.js proxy (/api/proxy) instead of the backend directly.
