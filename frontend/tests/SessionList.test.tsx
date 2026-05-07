@@ -80,6 +80,19 @@ describe("SessionList — create", () => {
     await user.click(screen.getByRole("button", { name: /new session/i }));
     expect(onCreate).toHaveBeenCalledOnce();
   });
+
+  it("disables the New Session button when isCreating is true", () => {
+    renderList({ isCreating: true });
+    expect(screen.getByRole("button", { name: /new session/i })).toBeDisabled();
+  });
+
+  it("does not call onCreate when button is disabled (isCreating)", async () => {
+    const onCreate = vi.fn();
+    const user = userEvent.setup();
+    renderList({ onCreate, isCreating: true });
+    await user.click(screen.getByRole("button", { name: /new session/i }));
+    expect(onCreate).not.toHaveBeenCalled();
+  });
 });
 
 // ── session list ───────────────────────────────────────────────────────────
