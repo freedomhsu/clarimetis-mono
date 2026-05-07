@@ -305,8 +305,10 @@ test.describe("Subscription gate (402)", () => {
     });
     // These sections should only render inside the blurred aria-hidden mock.
     // The live heading must not be accessible to AT or visible.
+    // Use an exact match so the upgrade-gate heading "Unlock your psychological
+    // profile" (which contains the same words) does not trigger a false failure.
     await expect(
-      page.getByRole("heading", { name: /psychological profile/i }),
+      page.getByRole("heading", { name: "Psychological Profile", exact: true }),
     ).not.toBeVisible();
   });
 });
@@ -402,9 +404,9 @@ test.describe("Psychological Profile section", () => {
     await page.goto("/insights");
     // cognitive_noise = "moderate" → a badge with text "moderate" inside the widget.
     // The widget also has "Cognitive Noise" as a label.
-    await expect(page.getByText(/cognitive noise/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/cognitive noise/i).first()).toBeVisible({ timeout: 10_000 });
     // The badge inside the widget should show the noise level.
-    const widget = page.locator("div", { has: page.getByText(/cognitive noise/i) });
+    const widget = page.locator("div", { has: page.getByText(/cognitive noise/i).first() });
     await expect(widget.getByText("moderate").first()).toBeVisible({ timeout: 5_000 });
   });
 });
@@ -553,8 +555,8 @@ test.describe("Recommendations section", () => {
 
   test("renders the 'why this is relevant' text for each recommendation", async ({ page }) => {
     await page.goto("/insights");
-    await expect(page.getByText(/imposter syndrome loop/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/stress peaks/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/imposter syndrome loop/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/stress peaks/i).first()).toBeVisible({ timeout: 5_000 });
   });
 });
 
@@ -636,7 +638,7 @@ test.describe("Relational Capital section", () => {
     await page.goto("/insights");
     // social_gratitude_index = 61; "Overall Social Health" label
     await expect(page.getByText(/overall social health/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("61")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("61").first()).toBeVisible({ timeout: 5_000 });
   });
 });
 
@@ -763,7 +765,7 @@ test.describe("Refresh button", () => {
 
   test("re-fetches the summary when clicked", async ({ page }) => {
     let callCount = 0;
-    await page.route(`${API_URL}/api/v1/analytics/summary`, (route) => {
+    await page.route(`${API_URL}/api/v1/analytics/summary*`, (route) => {
       callCount++;
       return route.fulfill({
         status: 200,
@@ -861,6 +863,6 @@ test.describe("Generated-at footer", () => {
     await page.goto("/insights");
     // Footer text: "Generated <date> · AI observations only — not a clinical assessment"
     await expect(page.getByText(/generated/i).last()).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/not a clinical assessment/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/not a clinical assessment/i).last()).toBeVisible({ timeout: 5_000 });
   });
 });

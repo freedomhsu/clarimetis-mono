@@ -71,7 +71,7 @@ test.describe("Daily limit reached (429)", () => {
   test("shows the UpgradeGate with 'Daily limit reached' heading", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await page.getByPlaceholder(/share what's on your mind/i).fill("one more message");
+    await page.getByPlaceholder(/share what/i).fill("one more message");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(/daily limit reached/i)).toBeVisible({ timeout: 8_000 });
@@ -80,7 +80,7 @@ test.describe("Daily limit reached (429)", () => {
   test("removes the optimistic user message after 429", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await page.getByPlaceholder(/share what's on your mind/i).fill("should be rolled back");
+    await page.getByPlaceholder(/share what/i).fill("should be rolled back");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Wait for the error gate to appear (confirms the error was processed)
@@ -93,7 +93,7 @@ test.describe("Daily limit reached (429)", () => {
   test("hides MessageInput and shows upgrade pricing buttons", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(/daily limit reached/i)).toBeVisible({ timeout: 8_000 });
@@ -103,13 +103,13 @@ test.describe("Daily limit reached (429)", () => {
     await expect(page.getByRole("button", { name: /pro annual/i })).toBeVisible();
 
     // MessageInput (the textarea) should no longer be visible
-    await expect(page.getByPlaceholder(/share what's on your mind/i)).not.toBeVisible();
+    await expect(page.getByPlaceholder(/share what/i)).not.toBeVisible();
   });
 
   test("dismissing the UpgradeGate restores MessageInput", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(/daily limit reached/i)).toBeVisible({ timeout: 8_000 });
@@ -118,7 +118,7 @@ test.describe("Daily limit reached (429)", () => {
     await page.getByRole("button", { name: /dismiss/i }).click();
 
     // MessageInput should be restored
-    await expect(page.getByPlaceholder(/share what's on your mind/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/share what/i)).toBeVisible();
   });
 });
 
@@ -140,7 +140,7 @@ test.describe("Pro feature required (402)", () => {
   test("shows 'Pro feature' heading when 402 is returned", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await page.getByPlaceholder(/share what's on your mind/i).fill("pro feature test");
+    await page.getByPlaceholder(/share what/i).fill("pro feature test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(/pro feature/i)).toBeVisible({ timeout: 8_000 });
@@ -149,7 +149,7 @@ test.describe("Pro feature required (402)", () => {
   test("also shows upgrade pricing after 402", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(/pro feature/i)).toBeVisible({ timeout: 8_000 });
@@ -207,7 +207,7 @@ test.describe("Media upload — happy path", () => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ url: uploadedUrl, content_type: "image/png" }),
+        body: JSON.stringify({ url: uploadedUrl, blob_path: uploadedUrl, content_type: "image/png" }),
       });
     });
   });
@@ -272,7 +272,7 @@ test.describe("Media upload — happy path", () => {
     await expect(page.locator(`img[src*="storage.example.com"]`)).toBeVisible({ timeout: 8_000 });
 
     // Type a message and send
-    await page.getByPlaceholder(/share what's on your mind/i).fill("Here is my image");
+    await page.getByPlaceholder(/share what/i).fill("Here is my image");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Wait for the POST to be made

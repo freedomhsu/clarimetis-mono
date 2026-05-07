@@ -234,7 +234,7 @@ test.describe("Insights page", () => {
 
   test("the Refresh button re-fetches analytics data", async ({ page }) => {
     let callCount = 0;
-    await page.route(`${API_URL}/api/v1/analytics/summary`, async (route) => {
+    await page.route(`${API_URL}/api/v1/analytics/summary*`, async (route) => {
       callCount++;
       await route.fulfill({
         status: 200,

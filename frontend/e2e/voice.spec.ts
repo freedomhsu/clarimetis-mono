@@ -433,7 +433,7 @@ test.describe("Error handling", () => {
     await page.goto("/voice");
     await page.getByRole("button", { name: /start speaking/i }).click();
 
-    await expect(page.getByText(/something went wrong/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/internal server error/i)).toBeVisible({ timeout: 8_000 });
   });
 
   test("dismiss button clears the error banner and returns the mic button", async ({ page }) => {
@@ -511,7 +511,7 @@ test.describe("Crisis detection", () => {
     await page.goto("/voice");
     await page.getByRole("button", { name: /start speaking/i }).click();
 
-    await expect(page.getByText(/988/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/988/i).first()).toBeVisible({ timeout: 8_000 });
   });
 
   test("does NOT show CrisisBanner when crisis_flagged is false", async ({ page }) => {

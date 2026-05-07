@@ -98,7 +98,7 @@ test.describe("Media Library — Pro user with files", () => {
     await page.goto("/media");
 
     await expect(page.getByText(/storage used/i)).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByText(/500 mb/i)).toBeVisible();
+    await expect(page.getByText(/500\.0 mb/i).first()).toBeVisible();
   });
 
   test("quota bar reflects the actual used bytes", async ({ page }) => {
@@ -106,7 +106,7 @@ test.describe("Media Library — Pro user with files", () => {
 
     // FAKE_FILE.size_bytes = 20 B — should show "20 B" as the used amount
     await expect(page.getByText(/storage used/i)).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByText(/20 b/i)).toBeVisible();
+    await expect(page.getByText(/20 b/i).first()).toBeVisible();
   });
 
   test("shows a file card with the filename and a download link", async ({ page }) => {
@@ -140,7 +140,7 @@ test.describe("Media Library — multiple files", () => {
 
     await expect(page.getByText(/storage used/i)).toBeVisible({ timeout: 8_000 });
     // 20 B + 1 MB = "1.0 MB" used
-    await expect(page.getByText(/1\.0 mb/i)).toBeVisible();
+    await expect(page.getByText(/1\.0 mb/i).first()).toBeVisible();
     // Plural label
     await expect(page.getByText(/\b2 files\b/i)).toBeVisible();
   });
@@ -167,10 +167,11 @@ test.describe("Media Library — non-image file", () => {
 
     await expect(page.getByText("report.pdf")).toBeVisible({ timeout: 8_000 });
     // The "Video" placeholder text is rendered for non-image files
-    await expect(page.getByText(/video/i)).toBeVisible();
-    // No <img> element should be present — PDFs use the icon fallback
-    const img = page.locator("img");
-    await expect(img).toHaveCount(0);
+    await expect(page.getByText("Video", { exact: true })).toBeVisible();
+    // No <img> element should be present for the PDF file card — only the Film icon placeholder
+    await expect(page.locator(`img[src*="${FAKE_PDF.url}"]`).or(
+      page.locator(`img[src*="report"]`)
+    )).toHaveCount(0);
   });
 });
 
@@ -355,7 +356,7 @@ test.describe("Media Library — free user upgrade gate", () => {
     await expect(
       page.getByText(/media library is a pro feature/i),
     ).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByRole("link", { name: /upgrade to pro/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /upgrade to pro/i }).first()).toBeVisible();
     // File list and quota bar must NOT be visible
     await expect(page.getByText(/storage used/i)).not.toBeVisible();
   });

@@ -79,7 +79,7 @@ test.describe("Chat flow", () => {
     await page.goto(`/chat/${SESSION_ID}`);
     // ChatWindow renders a branded empty state — verify its headline and at least
     // one starter prompt button are present.
-    await expect(page.getByText(/end social fear/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/end social fear/i).first()).toBeVisible({ timeout: 8_000 });
     await expect(page.getByRole("button", { name: /overwhelmed/i })).toBeVisible();
   });
 
@@ -88,7 +88,7 @@ test.describe("Chat flow", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    const textarea = page.getByPlaceholder(/share what's on your mind/i);
+    const textarea = page.getByPlaceholder(/share what/i);
     await textarea.fill("I have been feeling anxious");
     await page.getByRole("button", { name: /send/i }).click();
 
@@ -116,7 +116,7 @@ test.describe("Chat flow", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("I have been feeling anxious");
+    await page.getByPlaceholder(/share what/i).fill("I have been feeling anxious");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(aiReply)).toBeVisible({ timeout: 10_000 });
@@ -134,7 +134,7 @@ test.describe("Chat flow", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     // The thinking indicator (bouncing dots + "Thinking…" text) should appear
@@ -152,7 +152,7 @@ test.describe("Chat flow", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByRole("button", { name: /stop generation/i })).toBeVisible({
@@ -172,7 +172,7 @@ test.describe("Chat flow", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     const stopBtn = page.getByRole("button", { name: /stop generation/i });
@@ -201,7 +201,7 @@ test.describe("Chat flow", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    const textarea = page.getByPlaceholder(/share what's on your mind/i);
+    const textarea = page.getByPlaceholder(/share what/i);
 
     // Shift+Enter should NOT send (message bubble should not appear)
     await textarea.fill("line one");
@@ -223,11 +223,11 @@ test.describe("Chat flow", () => {
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
 
     // After typing, button becomes enabled
-    await page.getByPlaceholder(/share what's on your mind/i).fill("hello");
+    await page.getByPlaceholder(/share what/i).fill("hello");
     await expect(sendBtn).toBeEnabled();
 
     // Clearing the input (or entering only whitespace) disables it again
-    await page.getByPlaceholder(/share what's on your mind/i).fill("   ");
+    await page.getByPlaceholder(/share what/i).fill("   ");
     await expect(sendBtn).toBeDisabled();
   });
 
@@ -251,7 +251,7 @@ test.describe("Chat flow", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("anything");
+    await page.getByPlaceholder(/share what/i).fill("anything");
     await page.getByRole("button", { name: /send/i }).click();
 
     // The assistant content must appear (proves the status line was stripped and
@@ -286,15 +286,15 @@ test.describe("Chat flow", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("Diagnose my chest pain");
+    await page.getByPlaceholder(/share what/i).fill("Diagnose my chest pain");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Text must appear immediately after streaming
-    await expect(page.getByText(/health-related/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/health-related/i).first()).toBeVisible({ timeout: 10_000 });
 
     // Wait well past the 600 ms refresh window — text must still be present
     await page.waitForTimeout(1_200);
-    await expect(page.getByText(/health-related/i)).toBeVisible();
+    await expect(page.getByText(/health-related/i).first()).toBeVisible();
   });
 
   test("upload failure displays an inline error message (not a browser alert)", async ({ page }) => {
@@ -368,7 +368,7 @@ test.describe("Chat flow", () => {
     await mockChatStream(page, SESSION_ID, aiReply);
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("I need support");
+    await page.getByPlaceholder(/share what/i).fill("I need support");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Response must appear after streaming

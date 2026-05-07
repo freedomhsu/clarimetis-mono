@@ -59,7 +59,7 @@ test.describe("500 error on send", () => {
 
   test("shows an error message in the UI after a 500", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("hello");
+    await page.getByPlaceholder(/share what/i).fill("hello");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
@@ -69,7 +69,7 @@ test.describe("500 error on send", () => {
 
   test("rolls back the optimistic user message after a 500", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("this should be rolled back");
+    await page.getByPlaceholder(/share what/i).fill("this should be rolled back");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
@@ -81,7 +81,7 @@ test.describe("500 error on send", () => {
 
   test("re-enables the input and Send button after a 500", async ({ page }) => {
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("test");
+    await page.getByPlaceholder(/share what/i).fill("test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
@@ -89,9 +89,9 @@ test.describe("500 error on send", () => {
     ).toBeVisible({ timeout: 8_000 });
 
     // After error, the input and Send button should be interactive again
-    await expect(page.getByPlaceholder(/share what's on your mind/i)).toBeEnabled();
+    await expect(page.getByPlaceholder(/share what/i)).toBeEnabled();
     // Re-fill input to verify send button becomes enabled again
-    await page.getByPlaceholder(/share what's on your mind/i).fill("retry");
+    await page.getByPlaceholder(/share what/i).fill("retry");
     await expect(page.getByRole("button", { name: /send/i })).toBeEnabled();
   });
 });
@@ -112,7 +112,7 @@ test.describe("Network failure on send", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("network test");
+    await page.getByPlaceholder(/share what/i).fill("network test");
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(
@@ -140,7 +140,7 @@ test.describe("401 unauthorized on send", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill("auth test");
+    await page.getByPlaceholder(/share what/i).fill("auth test");
     await page.getByRole("button", { name: /send/i }).click();
 
     // Wait for error message or redirect to sign-in
