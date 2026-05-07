@@ -320,7 +320,7 @@ test.describe("Dashboard tier UI", () => {
     await page.goto("/dashboard");
     await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
     await page.getByRole("button", { name: /manage plan/i }).click();
-    await expect(page.getByRole("button", { name: /manage billing/i })).toBeVisible({ timeout: 4_000 });
+    await expect(page.getByRole("button", { name: /manage billing/i }).last()).toBeVisible({ timeout: 4_000 });
     await expect(page.getByRole("button", { name: /pro monthly/i })).not.toBeVisible();
     await expect(page.getByRole("button", { name: /pro annual/i })).not.toBeVisible();
   });
