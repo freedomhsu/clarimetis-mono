@@ -14,6 +14,8 @@ resource "google_cloud_run_v2_service" "backend" {
       max_instance_count = 10
     }
 
+    startup_cpu_boost = true
+
     volumes {
       name = "cloudsql"
       cloud_sql_instance {

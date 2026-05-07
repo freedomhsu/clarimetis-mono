@@ -24,6 +24,7 @@ interface Props {
   onDelete: (sessionId: string) => void;
   onRename: (sessionId: string, title: string) => void;
   tier?: "free" | "pro";
+  isCreating?: boolean;
 }
 
 function relativeTime(iso: string): string {
@@ -47,6 +48,7 @@ export function SessionList({
   onDelete,
   onRename,
   tier = "free",
+  isCreating = false,
 }: Props) {
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -107,7 +109,8 @@ export function SessionList({
         {/* New Session button */}
         <button
           onClick={onCreate}
-          className="relative w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold active:scale-[0.98] transition-all text-white bg-gradient-to-br from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-md shadow-indigo-900/20 ring-1 ring-white/[0.10]"
+          disabled={isCreating}
+          className="relative w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold active:scale-[0.98] transition-all text-white bg-gradient-to-br from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-md shadow-indigo-900/20 ring-1 ring-white/[0.10] disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Plus size={13} />
           New Session
