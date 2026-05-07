@@ -196,20 +196,20 @@ async def test_sign_blob_path_uses_sa_email_for_adc_credentials():
     mock_settings = MagicMock()
     mock_settings.gcs_bucket_name = "clarimetis-media-dev"
     mock_settings.gcs_signing_sa_email = "signer@my-project.iam.gserviceaccount.com"
+    mock_settings.signed_url_ttl_hours = 1
 
     with (
         patch("app.services.storage._get_client", return_value=mock_client),
-        patch("app.services.storage.get_gcp_credentials", return_value=fake_creds),
+        patch(
+            "app.services.storage._get_signing_credentials",
+            return_value=(fake_creds, mock_settings.gcs_signing_sa_email),
+        ),
         patch(
             "app.services.storage.get_settings",
             return_value=mock_settings,
         ),
-        # isinstance(creds, google.auth.credentials.Signing) must return False
-        patch(
-            "app.services.storage.google.auth.credentials.Signing",
-            new=type("_NeverMatch", (), {}),  # a class nothing will match
-        ),
         patch("asyncio.to_thread", side_effect=_fake_to_thread),
+        patch("app.services.storage.google"),
     ):
         from app.services.storage import sign_blob_path
 

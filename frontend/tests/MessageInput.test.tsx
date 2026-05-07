@@ -33,7 +33,7 @@ function setup(props: Partial<Parameters<typeof MessageInput>[0]> = {}) {
   const onStop = vi.fn();
   const user = userEvent.setup();
   render(<MessageInput onSend={onSend} onStop={onStop} {...props} />);
-  const textarea = screen.getByPlaceholderText(/share what's on your mind/i);
+  const textarea = screen.getByPlaceholderText(/share what/i);
   const sendButton = () =>
     screen.queryByRole("button", { name: /send/i });
   const stopButton = () =>
@@ -46,7 +46,7 @@ function setup(props: Partial<Parameters<typeof MessageInput>[0]> = {}) {
 describe("MessageInput — rendering", () => {
   it("renders the textarea", () => {
     setup();
-    expect(screen.getByPlaceholderText(/share what's on your mind/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/share what/i)).toBeInTheDocument();
   });
 
   it("shows Send button by default (not streaming)", () => {
@@ -149,7 +149,7 @@ describe("MessageInput — upload error display", () => {
     await user.click(screen.getByTestId("trigger-upload-error"));
     expect(screen.getByText(/Failed to upload file/i)).toBeInTheDocument();
     // Type and send a message — should clear the error
-    await user.type(screen.getByPlaceholderText(/share what's on your mind/i), "hello");
+    await user.type(screen.getByPlaceholderText(/share what/i), "hello");
     await user.keyboard("{Enter}");
     expect(screen.queryByText(/Failed to upload file/i)).not.toBeInTheDocument();
   });

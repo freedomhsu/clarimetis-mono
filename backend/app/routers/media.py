@@ -281,7 +281,11 @@ async def delete_file(
     if not blob_path.startswith(expected_prefix):
         raise HTTPException(status_code=403, detail="Access denied.")
 
-    size = await delete_media_blob(blob_path)
+    try:
+        size = await delete_media_blob(blob_path)
+    except Exception as exc:
+        logger.error("delete_media_blob failed for %s: %s", blob_path, exc)
+        raise HTTPException(status_code=500, detail="Failed to delete file from storage.")
 
     # Atomic decrement — clamp to 0 to guard against counter drift.
     await db.execute(

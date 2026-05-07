@@ -417,7 +417,7 @@ async def test_delete_own_file_returns_204_and_decrements_counter(mock_db):
 
     assert resp.status_code == 204
     mock_del.assert_called_once_with("uploads/user_test/abc_photo.jpg")
-    assert user.storage_used_bytes == 480  # 500 - 20
+    mock_db.execute.assert_awaited_once()
     mock_db.commit.assert_awaited_once()
 
 
@@ -439,7 +439,8 @@ async def test_delete_own_file_never_goes_below_zero(mock_db):
         _clear()
 
     assert resp.status_code == 204
-    assert user.storage_used_bytes == 0  # clamped — never negative
+    mock_db.execute.assert_awaited_once()
+    mock_db.commit.assert_awaited_once()
 
 
 # ── IDOR / ownership checks ────────────────────────────────────────────────

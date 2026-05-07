@@ -28,7 +28,7 @@ import { useBilling } from "@/lib/hooks/useBilling";
 
 // ── module mocks ──────────────────────────────────────────────────────────
 
-const mockGetToken = vi.hoisted(() => vi.fn<[], Promise<string | null>>());
+const mockGetToken = vi.hoisted(() => vi.fn<() => Promise<string | null>>());
 const mockIsSignedIn = vi.hoisted(() => ({ value: true }));
 
 vi.mock("@clerk/nextjs", () => ({

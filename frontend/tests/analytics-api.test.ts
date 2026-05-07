@@ -57,6 +57,8 @@ const FAKE_SUMMARY: AnalyticsSummary = {
   self_esteem_score: 58,
   ego_score: 52,
   emotion_control_score: 67,
+  self_awareness_score: null,
+  motivation_score: null,
   stress_load: 38,
   cognitive_noise: "moderate",
   logic_loops: [{ topic: "Imposter syndrome", frequency: 9, efficiency: 35, fix_type: "Reframe" }],
@@ -80,6 +82,8 @@ const FAKE_HISTORY: ScoreHistory = {
       social: 40,
       ego: 52,
       emotion_control: 60,
+      self_awareness: null,
+      motivation: null,
     },
     {
       date: "2026-05-01T10:00:00+00:00",
@@ -90,6 +94,8 @@ const FAKE_HISTORY: ScoreHistory = {
       social: 61,
       ego: 52,
       emotion_control: 67,
+      self_awareness: null,
+      motivation: null,
     },
   ],
 };
@@ -217,6 +223,8 @@ describe("api.getScoreHistory()", () => {
           social: null,
           ego: null,
           emotion_control: null,
+          self_awareness: null,
+          motivation: null,
         },
       ],
     };

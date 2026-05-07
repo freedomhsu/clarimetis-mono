@@ -24,7 +24,7 @@ import type { MediaFile } from "@/lib/api";
 // vi.hoisted ensures mockGetToken is initialised before vi.mock factories run
 // so we can update it per-test in beforeEach.
 
-const mockGetToken = vi.hoisted(() => vi.fn<[], Promise<string | null>>());
+const mockGetToken = vi.hoisted(() => vi.fn<() => Promise<string | null>>());
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({ getToken: mockGetToken }),

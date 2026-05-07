@@ -357,6 +357,7 @@ async def test_generate_analytics_happy_path():
         patch("app.services.gemini.get_settings") as mock_settings,
     ):
         mock_settings.return_value.gemini_pro_model = "gemini-2.5-pro"
+        mock_settings.return_value.gemini_analytics_timeout = 60
         result = await generate_analytics(["Hello there", "I feel anxious"])
 
     assert result["data_reliability"] == "moderate"
@@ -393,6 +394,7 @@ async def test_generate_analytics_migrates_primary_loop():
         patch("app.services.gemini.get_settings") as mock_settings,
     ):
         mock_settings.return_value.gemini_pro_model = "gemini-2.5-pro"
+        mock_settings.return_value.gemini_analytics_timeout = 60
         result = await generate_analytics(["Test"])
 
     assert len(result["logic_loops"]) == 1
@@ -480,7 +482,7 @@ async def test_generate_analytics_does_not_re_slice_snippets():
     mock_model.generate_content.side_effect = _capture_prompt
 
     async def _fake_to_thread(fn, *args, **kwargs):
-        return fn()
+        return fn(*args, **kwargs)
 
     # Provide 60 snippets — all 60 should appear in the prompt if no internal slice.
     snippets = [f"Message {i}" for i in range(60)]
@@ -492,6 +494,7 @@ async def test_generate_analytics_does_not_re_slice_snippets():
         patch("app.services.gemini.get_settings") as mock_settings,
     ):
         mock_settings.return_value.gemini_pro_model = "gemini-2.5-pro"
+        mock_settings.return_value.gemini_analytics_timeout = 60
         await generate_analytics(snippets)
 
     assert len(captured) == 1

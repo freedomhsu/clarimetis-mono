@@ -49,7 +49,7 @@ describe("api internal request()", () => {
 
   it("throws a plain Error on non-subscription error responses", async () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "not found" }, 404));
-    await expect(api.getSessions("tok")).rejects.toThrow("404");
+    await expect(api.getSessions("tok")).rejects.toThrow("not found");
   });
 
   it("attaches .subscriptionError on 402 with detail.code", async () => {
@@ -71,7 +71,7 @@ describe("api internal request()", () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "payment required" }, 402));
     const err = await api.getSessions("tok").catch((e) => e);
     expect(err.subscriptionError).toBeUndefined();
-    expect(err.message).toMatch("402");
+    expect(err.message).toMatch("payment required");
   });
 });
 
@@ -133,7 +133,7 @@ describe("api.deleteSession()", () => {
 
   it("throws plain Error on 404", async () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "not found" }, 404));
-    await expect(api.deleteSession("tok", "s1")).rejects.toThrow("404");
+    await expect(api.deleteSession("tok", "s1")).rejects.toThrow("not found");
   });
 });
 
@@ -158,7 +158,7 @@ describe("api.getMessages()", () => {
 
   it("throws on non-200 response", async () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "forbidden" }, 403));
-    await expect(api.getMessages("tok", "s1")).rejects.toThrow("403");
+    await expect(api.getMessages("tok", "s1")).rejects.toThrow("forbidden");
   });
 });
 

@@ -18,7 +18,7 @@ import { I18nProvider, useI18n } from "@/components/providers/I18nContext";
 
 // ── module mocks ──────────────────────────────────────────────────────────
 
-const mockGetToken = vi.hoisted(() => vi.fn<[], Promise<string | null>>());
+const mockGetToken = vi.hoisted(() => vi.fn<() => Promise<string | null>>());
 const mockIsSignedIn = vi.hoisted(() => ({ value: false }));
 
 vi.mock("@clerk/nextjs", () => ({

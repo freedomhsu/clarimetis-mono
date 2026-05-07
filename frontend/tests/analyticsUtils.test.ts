@@ -27,6 +27,8 @@ function makePoint(date: string, overrides: Partial<ScorePoint> = {}): ScorePoin
     social: 50,
     ego: 50,
     emotion_control: 50,
+    self_awareness: null,
+    motivation: null,
     ...overrides,
   };
 }

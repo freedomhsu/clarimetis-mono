@@ -19,7 +19,7 @@ import type { SubscriptionError } from "@/lib/api";
 
 // ── module mocks ──────────────────────────────────────────────────────────
 
-const mockGetToken = vi.hoisted(() => vi.fn<[], Promise<string | null>>());
+const mockGetToken = vi.hoisted(() => vi.fn<() => Promise<string | null>>());
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({ getToken: mockGetToken }),
