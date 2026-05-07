@@ -9,15 +9,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Unit tests (no secrets required) ───────────────────────────────────────
-  unit-tests:
-    name: Unit tests
+  # ── Backend unit tests ──────────────────────────────────────────────────────
+  backend-unit:
+    name: Backend unit tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # ── Backend (pytest) ────────────────────────────────────────────────────
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -47,7 +46,14 @@ jobs:
           STRIPE_PRO_MONTHLY_PRICE_ID: "price_placeholder_monthly"
           STRIPE_PRO_ANNUAL_PRICE_ID: "price_placeholder_annual"
 
-      # ── Frontend (vitest + tsc) ─────────────────────────────────────────────
+  # ── Frontend unit tests + type-check ───────────────────────────────────────
+  frontend-unit:
+    name: Frontend unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -70,8 +76,126 @@ jobs:
   e2e:
     name: Playwright e2e
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [backend-unit, frontend-unit]
     environment: development
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: clarimetis_test
+          POSTGRES_USER: clarimetis
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Start backend ───────────────────────────────────────────────────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Start backend
+        working-directory: backend
+        run: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        env:
+          DATABASE_URL: "postgresql+asyncpg://clarimetis:testpassword@localhost:5432/clarimetis_test"
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_JWT_ISSUER: ${{ secrets.CLERK_JWT_ISSUER }}
+          GCP_PROJECT_ID: "test-project"
+          GCP_LOCATION: "us-central1"
+          GCS_BUCKET_NAME: "test-bucket"
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ""
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: "whsec_test_placeholder"
+          STRIPE_PRO_MONTHLY_PRICE_ID: "price_test_monthly"
+          STRIPE_PRO_ANNUAL_PRICE_ID: "price_test_annual"
+          CORS_ORIGINS: "http://localhost:3000"
+          FRONTEND_URL: "http://localhost:3000"
+
+      - name: Wait for backend to be ready
+        run: |
+          for i in {1..30}; do
+            curl -sf http://localhost:8000/health && echo " backend ready" && break
+            echo "Waiting for backend... attempt $i"
+            sleep 3
+          done
+
+      # ── Run Playwright ──────────────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install --prefer-offline
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install chromium --with-deps
+
+      - name: Create e2e auth directory
+        working-directory: frontend
+        run: mkdir -p e2e/.auth
+
+      - name: Check e2e credentials
+        id: check-creds
+        run: |
+          if [[ -n "$TEST_USER_EMAIL" && -n "$TEST_USER_PASSWORD" ]]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::notice::TEST_USER_EMAIL or TEST_USER_PASSWORD not set in the 'development' environment — skipping Playwright e2e tests"
+          fi
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - name: Run Playwright e2e
+        if: steps.check-creds.outputs.available == 'true'
+        working-directory: frontend
+        run: npm run test:e2e
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+          NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+          NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: /dashboard
+          NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: /dashboard
+
+      - name: Upload Playwright report on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+
 
     services:
       postgres:
