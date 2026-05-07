@@ -22,10 +22,10 @@ config({ path: ".env.local", quiet: true });
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/clerk-global-setup",
-  fullyParallel: false, // auth state is shared; run serially to keep DB clean
+  fullyParallel: false, // tests within a file are still sequential to keep DB clean
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: 1,
+  workers: process.env.CI ? 2 : 1,
   reporter: process.env.CI ? "github" : "html",
   timeout: 60_000, // generous timeout for CI (Clerk API + Next.js startup)
 
@@ -57,9 +57,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    // Use the dev server everywhere — avoids a 10-15 min Next.js production
-    // build on every CI run while still exercising the full app.
-    command: "npm run dev",
+    // Use the Turbopack dev server — avoids a 10-15 min Next.js production
+    // build and compiles pages ~5× faster than webpack on first access.
+    command: "npm run dev:e2e",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
