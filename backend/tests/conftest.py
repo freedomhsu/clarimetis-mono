@@ -210,3 +210,25 @@ def mock_db():
     db.add = MagicMock()
     db.rollback = AsyncMock()
     return db
+
+
+# ── Ensure pytest exits cleanly after the test session ────────────────────
+# Background threads (asyncio default executor, aiosqlite, SQLAlchemy pool)
+# can keep the Python process alive after all tests finish.  os._exit() forces
+# an immediate exit with the correct code so CI steps don't hang indefinitely.
+# ── Ensure pytest exits cleanly after the test session ────────────────────
+# Background threads (asyncio default executor, aiosqlite, SQLAlchemy pool)
+# can keep the Python process alive after all tests finish.
+# Monkey-patching Thread.__init__ to default daemon=True makes every thread
+# spawned during the test run a daemon thread, so Python does not wait for
+# them when the main thread exits.  This is safe in a test-only process.
+import threading as _threading
+_orig_thread_init = _threading.Thread.__init__
+
+
+def _daemon_thread_init(self, *args, **kwargs):
+    kwargs.setdefault("daemon", True)
+    _orig_thread_init(self, *args, **kwargs)
+
+
+_threading.Thread.__init__ = _daemon_thread_init  # type: ignore[method-assign]

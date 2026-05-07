@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import re
+import threading
 from collections.abc import AsyncGenerator
 
 from tenacity import AsyncRetrying, before_sleep_log, retry_if_exception, stop_after_attempt, wait_exponential
@@ -191,6 +192,7 @@ async def stream_chat_response(
 
         async def _stream_via_queue() -> AsyncGenerator[str, None]:
             queue: asyncio.Queue = asyncio.Queue()
+            loop = asyncio.get_running_loop()
 
             def _producer() -> None:
                 try:
@@ -198,24 +200,26 @@ async def stream_chat_response(
                         parts, generation_config=gen_config, stream=True
                     ):
                         if chunk.text:
-                            queue.put_nowait(chunk.text)
+                            loop.call_soon_threadsafe(queue.put_nowait, chunk.text)
                 except Exception as exc:
-                    queue.put_nowait(exc)
+                    try:
+                        loop.call_soon_threadsafe(queue.put_nowait, exc)
+                    except RuntimeError:
+                        pass
                 finally:
-                    queue.put_nowait(_SENTINEL)
+                    try:
+                        loop.call_soon_threadsafe(queue.put_nowait, _SENTINEL)
+                    except RuntimeError:
+                        pass
 
-            loop = asyncio.get_running_loop()
-            fut = loop.run_in_executor(None, _producer)
-            try:
-                while True:
-                    item = await asyncio.wait_for(queue.get(), timeout=get_settings().gemini_stream_timeout)
-                    if item is _SENTINEL:
-                        break
-                    if isinstance(item, Exception):
-                        raise item
-                    yield item
-            finally:
-                await fut  # ensure thread is cleaned up
+            threading.Thread(target=_producer, daemon=True, name="gemini-stream").start()
+            while True:
+                item = await asyncio.wait_for(queue.get(), timeout=get_settings().gemini_stream_timeout)
+                if item is _SENTINEL:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                yield item
 
         async for attempt in AsyncRetrying(**_GEMINI_RETRY):
             with attempt:
