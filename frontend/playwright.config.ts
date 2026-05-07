@@ -24,7 +24,7 @@ export default defineConfig({
   globalSetup: "./e2e/clerk-global-setup",
   fullyParallel: false, // auth state is shared; run serially to keep DB clean
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   workers: 1,
   reporter: process.env.CI ? "github" : "html",
   timeout: 60_000, // generous timeout for CI (Clerk API + Next.js startup)
@@ -57,13 +57,12 @@ export default defineConfig({
   ],
 
   webServer: {
-    // In CI: build once then serve a production binary (fast startup, no JIT).
-    // Locally: use the dev server for fast iteration.
-    command: process.env.CI ? "npm run build && npm start" : "npm run dev",
+    // Use the dev server everywhere — avoids a 10-15 min Next.js production
+    // build on every CI run while still exercising the full app.
+    command: "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    // CI build + start can take a few minutes; local dev server is fast.
-    timeout: process.env.CI ? 300_000 : 120_000,
+    timeout: 120_000,
     stdout: "pipe",
     stderr: "pipe",
   },

@@ -151,9 +151,21 @@ jobs:
         working-directory: frontend
         run: npm install --prefer-offline
 
-      - name: Install Playwright browsers
+      - name: Cache Playwright browser binaries
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install Playwright chromium binary
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: frontend
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install chromium
+
+      - name: Install Playwright system dependencies
+        working-directory: frontend
+        run: npx playwright install-deps chromium
 
       - name: Create e2e auth directory
         working-directory: frontend
