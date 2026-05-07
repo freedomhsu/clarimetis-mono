@@ -229,6 +229,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "filetype" },
     { name = "google-cloud-aiplatform" },
+    { name = "google-cloud-documentai" },
     { name = "google-cloud-speech" },
     { name = "google-cloud-storage" },
     { name = "google-cloud-texttospeech" },
@@ -241,6 +242,7 @@ dependencies = [
     { name = "pyjwt" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
+    { name = "resend" },
     { name = "slowapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "stripe" },
@@ -264,6 +266,7 @@ requires-dist = [
     { name = "fastapi", specifier = "==0.115.0" },
     { name = "filetype", specifier = "==1.2.0" },
     { name = "google-cloud-aiplatform", specifier = "==1.70.0" },
+    { name = "google-cloud-documentai", specifier = "==2.33.0" },
     { name = "google-cloud-speech", specifier = "==2.27.0" },
     { name = "google-cloud-storage", specifier = "==2.18.0" },
     { name = "google-cloud-texttospeech", specifier = "==2.17.0" },
@@ -276,6 +279,7 @@ requires-dist = [
     { name = "pyjwt", extras = ["cryptography"], specifier = "==2.9.0" },
     { name = "python-dotenv", specifier = "==1.0.1" },
     { name = "python-multipart", specifier = "==0.0.12" },
+    { name = "resend", specifier = "==2.10.0" },
     { name = "slowapi", specifier = "==0.1.9" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.0.35" },
     { name = "stripe", specifier = "==11.1.0" },
@@ -528,6 +532,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dc/24/6ca08b0a03c7b0c620427503ab00353a4ae806b848b93bcea18b6b76fde6/google_cloud_core-2.5.1.tar.gz", hash = "sha256:3dc94bdec9d05a31d9f355045ed0f369fbc0d8c665076c734f065d729800f811", size = 36078, upload-time = "2026-03-30T22:50:08.057Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/73/d9/5bb050cb32826466aa9b25f79e2ca2879fe66cb76782d4ed798dd7506151/google_cloud_core-2.5.1-py3-none-any.whl", hash = "sha256:ea62cdf502c20e3e14be8a32c05ed02113d7bef454e40ff3fab6fe1ec9f1f4e7", size = 29452, upload-time = "2026-03-30T22:48:31.567Z" },
+]
+
+[[package]]
+name = "google-cloud-documentai"
+version = "2.33.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", version = "2.25.2", source = { registry = "https://pypi.org/simple" }, extra = ["grpc"], marker = "python_full_version >= '3.14'" },
+    { name = "google-api-core", version = "2.30.3", source = { registry = "https://pypi.org/simple" }, extra = ["grpc"], marker = "python_full_version < '3.14'" },
+    { name = "google-auth" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/df/ba/a924bd8befb8b94d3360846ecb85b7ee8219e655c15bd0e64d1f2779c053/google_cloud_documentai-2.33.0.tar.gz", hash = "sha256:60dc5353882ee8fa18bfe6607740e03827322c055c4b291d732d93857db8a4e3", size = 362921, upload-time = "2024-10-08T18:52:06.496Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/18/7a889300b8e855e925d16e4b6bc418902de2288c2b777f8720b0fa90efd1/google_cloud_documentai-2.33.0-py2.py3-none-any.whl", hash = "sha256:e47135289bd38ecbb146a239fe72477783c83f4b3d5b6a4f732a108c33c94fbc", size = 319036, upload-time = "2024-10-08T18:52:05.085Z" },
 ]
 
 [[package]]
@@ -1218,6 +1238,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5f/a4/98b9c7c6428a668bf7e42ebb7c79d576a1c3c1e3ae2d47e674b468388871/requests-2.33.1.tar.gz", hash = "sha256:18817f8c57c6263968bc123d237e3b8b08ac046f5456bd1e307ee8f4250d3517", size = 134120, upload-time = "2026-03-30T16:09:15.531Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d7/8e/7540e8a2036f79a125c1d2ebadf69ed7901608859186c856fa0388ef4197/requests-2.33.1-py3-none-any.whl", hash = "sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a", size = 64947, upload-time = "2026-03-30T16:09:13.83Z" },
+]
+
+[[package]]
+name = "resend"
+version = "2.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/03/6c/57f032ea10d19bede1f21195301a40722e81fe6563fafbae7e37af77c8d5/resend-2.10.0.tar.gz", hash = "sha256:f9091f487f0d878095bb7a744549969c624815413b7ac82ba92039e2d0804b75", size = 14779, upload-time = "2025-05-15T01:06:15.06Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/5e/ad687375e7610050de72ea5c254514c002e18c38d96ffc4afa4c8aa4d924/resend-2.10.0-py2.py3-none-any.whl", hash = "sha256:1d65a36b032522d5eb738e08956ca29cbaa217a270efbe915a071eb72c0d6956", size = 21354, upload-time = "2025-05-15T01:06:13.629Z" },
 ]
 
 [[package]]

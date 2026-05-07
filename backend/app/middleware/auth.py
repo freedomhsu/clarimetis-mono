@@ -15,25 +15,24 @@ bearer_scheme = HTTPBearer(auto_error=False)
 _jwks_cache: dict | None = None
 _jwks_fetched_at: float = 0.0
 _jwks_lock = asyncio.Lock()
-# Refresh JWKS every 6 hours regardless of whether a kid mismatch occurs.
-_JWKS_TTL = 6 * 3600
 
 
 async def _get_jwks(*, force_refresh: bool = False) -> dict:
     global _jwks_cache, _jwks_fetched_at
     now = time.monotonic()
-    cache_stale = (now - _jwks_fetched_at) >= _JWKS_TTL
+    cache_stale = (now - _jwks_fetched_at) >= get_settings().jwks_cache_ttl_seconds
     if _jwks_cache is not None and not force_refresh and not cache_stale:
         return _jwks_cache
     async with _jwks_lock:
         # Double-check inside the lock
         now = time.monotonic()
-        cache_stale = (now - _jwks_fetched_at) >= _JWKS_TTL
+        cache_stale = (now - _jwks_fetched_at) >= get_settings().jwks_cache_ttl_seconds
         if _jwks_cache is not None and not force_refresh and not cache_stale:
             return _jwks_cache
         async with httpx.AsyncClient() as client:
             resp = await client.get(
-                f"{get_settings().clerk_jwt_issuer}/.well-known/jwks.json", timeout=10
+                f"{get_settings().clerk_jwt_issuer}/.well-known/jwks.json",
+                timeout=get_settings().clerk_jwks_fetch_timeout,
             )
             resp.raise_for_status()
             _jwks_cache = resp.json()

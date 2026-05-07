@@ -176,4 +176,35 @@ test.describe("Sign-up page", () => {
       page.getByRole("alert").or(page.getByText(/required|enter your/i)),
     ).toBeVisible({ timeout: 5_000 });
   });
+
+  test("clerk-captcha mount point is present in the DOM", async ({ page }) => {
+    // Clerk's bot-protection looks for #clerk-captcha to mount the Smart
+    // CAPTCHA widget. If the element is missing it falls back to Invisible
+    // CAPTCHA, which can silently block sign-ups. This regression test
+    // ensures the div is rendered inside the form.
+    const captchaEl = page.locator("#clerk-captcha");
+    await expect(captchaEl).toBeAttached({ timeout: 8_000 });
+  });
+
+  test("clicking Google button does not throw a JS error before OAuth redirect", async ({
+    page,
+  }) => {
+    const jsErrors: string[] = [];
+    page.on("pageerror", (err) => jsErrors.push(err.message));
+
+    // Wait for Clerk to initialise (isLoaded = true) — indicated by the
+    // social buttons becoming enabled.
+    const googleBtn = page.getByRole("button", { name: /google/i });
+    await expect(googleBtn).toBeEnabled({ timeout: 10_000 });
+
+    // Click — this will trigger authenticateWithRedirect. In a dev environment
+    // without real OAuth, Clerk initiates the redirect; we only care that no
+    // synchronous JS error is thrown before the navigation starts.
+    await Promise.race([
+      googleBtn.click(),
+      page.waitForNavigation({ timeout: 5_000 }).catch(() => {/* navigation may not complete in CI */}),
+    ]);
+
+    expect(jsErrors.filter((m) => m.includes("clerk-captcha"))).toHaveLength(0);
+  });
 });

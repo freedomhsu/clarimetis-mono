@@ -7,7 +7,7 @@ WORKDIR /app
 # Install production dependencies only — Playwright and other dev tools
 # are not needed inside the Docker container.
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --no-audit || npm install --omit=dev --no-audit || npm install --omit=dev
 
 COPY . .
 
@@ -21,9 +21,7 @@ FROM node:22 AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install
-
-COPY . .
+RUN npm install --no-audit || npm install --no-audit || npm install
 
 # NEXT_PUBLIC_* vars are baked into the bundle at build time.
 # Pass them via --build-arg in CI/CD (or docker build locally).

@@ -22,14 +22,24 @@ class UserSync(BaseModel):
     full_name: str | None = None
 
 
+# Supported language codes — kept in sync with the frontend selector
+SUPPORTED_LANGUAGES = {"en", "es", "pt", "fr", "zh-TW", "ja", "ko", "it"}
+
+
 class UserOut(BaseModel):
     id: uuid.UUID
     clerk_user_id: str
     email: str
     full_name: str | None
     subscription_tier: str
+    storage_used_bytes: int = 0
+    preferred_language: str = "en"
 
     model_config = {"from_attributes": True}
+
+
+class LanguageUpdate(BaseModel):
+    language: str
 
 
 class BillingUrlResponse(BaseModel):
@@ -86,6 +96,40 @@ async def get_me(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
+
+
+@router.get("/language")
+async def get_language(
+    clerk_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return the user's preferred language code."""
+    result = await db.execute(select(User).where(User.clerk_user_id == clerk_user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return {"preferred_language": user.preferred_language}
+
+
+@router.patch("/language")
+async def set_language(
+    body: LanguageUpdate,
+    clerk_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Update the user's preferred language."""
+    if body.language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported language '{body.language}'. Supported: {sorted(SUPPORTED_LANGUAGES)}",
+        )
+    result = await db.execute(select(User).where(User.clerk_user_id == clerk_user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.preferred_language = body.language
+    await db.commit()
+    return {"preferred_language": user.preferred_language}
 
 
 @router.post("/subscribe", response_model=BillingUrlResponse)

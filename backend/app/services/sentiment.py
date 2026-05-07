@@ -7,14 +7,9 @@ The score feeds into the Telemetry Engine's V_sent variable:
     S_total = (W1 * V_sent) + (W2 * V_conf) + (W3 * V_over) + (W4 * V_sleep)
 """
 
-import asyncio
 import json
 
-import vertexai
-from vertexai.generative_models import GenerativeModel
-
-from app.config import get_settings
-from app.services.gcp_credentials import init_vertexai
+from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
 
 _SENTIMENT_PROMPT = """You are a sentiment analyser for a wellness coaching app.
@@ -29,16 +24,9 @@ async def score_sentiment(text: str) -> float:
 
     Falls back to 0.0 (neutral) on any error so callers are never blocked.
     """
-    init_vertexai()
-    model = GenerativeModel(get_settings().gemini_flash_model)
     prompt = f"{_SENTIMENT_PROMPT}\n\nUser message: {text[:2000]}"
-
     try:
-        response = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=15.0,
-        )
-        raw = strip_markdown_json(response.text.strip())
+        raw = strip_markdown_json(await gemini_generate(prompt, timeout=15.0))
         data = json.loads(raw)
         score = float(data.get("score", 0.0))
         return max(-1.0, min(1.0, score))  # clamp to valid range

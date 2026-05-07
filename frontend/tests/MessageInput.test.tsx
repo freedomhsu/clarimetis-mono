@@ -6,7 +6,20 @@ import { MessageInput } from "@/components/chat/MessageInput";
 // ── stub heavy sub-components ─────────────────────────────────────────────
 
 vi.mock("@/components/chat/MediaUpload", () => ({
-  MediaUpload: () => null,
+  // Render a button that fires onUploadError so we can test the error display
+  // without needing a real file upload. The stub is transparent to all other tests.
+  MediaUpload: ({
+    onUploadError,
+  }: {
+    onUploadError?: (msg?: string) => void;
+  }) => (
+    <button
+      data-testid="trigger-upload-error"
+      onClick={() => onUploadError?.("Failed to upload file. Please try again.")}
+    >
+      Upload
+    </button>
+  ),
 }));
 
 vi.mock("@/components/chat/VoiceRecorder", () => ({
@@ -20,7 +33,7 @@ function setup(props: Partial<Parameters<typeof MessageInput>[0]> = {}) {
   const onStop = vi.fn();
   const user = userEvent.setup();
   render(<MessageInput onSend={onSend} onStop={onStop} {...props} />);
-  const textarea = screen.getByPlaceholderText(/share what's on your mind/i);
+  const textarea = screen.getByPlaceholderText(/share what/i);
   const sendButton = () =>
     screen.queryByRole("button", { name: /send/i });
   const stopButton = () =>
@@ -33,7 +46,7 @@ function setup(props: Partial<Parameters<typeof MessageInput>[0]> = {}) {
 describe("MessageInput — rendering", () => {
   it("renders the textarea", () => {
     setup();
-    expect(screen.getByPlaceholderText(/share what's on your mind/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/share what/i)).toBeInTheDocument();
   });
 
   it("shows Send button by default (not streaming)", () => {
@@ -55,14 +68,14 @@ describe("MessageInput — sending", () => {
     const { onSend, user, textarea } = setup();
     await user.type(textarea, "  hello world  ");
     await user.click(screen.getByRole("button", { name: /send/i }));
-    expect(onSend).toHaveBeenCalledWith("hello world", undefined);
+    expect(onSend).toHaveBeenCalledWith("hello world", undefined, undefined);
   });
 
   it("calls onSend when Enter is pressed", async () => {
     const { onSend, user, textarea } = setup();
     await user.type(textarea, "hi there");
     await user.keyboard("{Enter}");
-    expect(onSend).toHaveBeenCalledWith("hi there", undefined);
+    expect(onSend).toHaveBeenCalledWith("hi there", undefined, undefined);
   });
 
   it("does NOT call onSend when Shift+Enter is pressed", async () => {
@@ -112,5 +125,32 @@ describe("MessageInput — stop button", () => {
     const { onStop, user } = setup({ isStreaming: true });
     await user.click(screen.getByRole("button", { name: /stop/i }));
     expect(onStop).toHaveBeenCalled();
+  });
+});
+
+// ── upload error display ──────────────────────────────────────────────────
+
+describe("MessageInput — upload error display", () => {
+  it("shows an inline error message when onUploadError is fired", async () => {
+    const user = userEvent.setup();
+    render(<MessageInput onSend={vi.fn()} onStop={vi.fn()} />);
+    // The MediaUpload stub renders a button that calls onUploadError
+    await user.click(screen.getByTestId("trigger-upload-error"));
+    expect(
+      screen.getByText(/Failed to upload file/i),
+    ).toBeInTheDocument();
+  });
+
+  it("clears the upload error when a new message is sent", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    render(<MessageInput onSend={onSend} onStop={vi.fn()} />);
+    // Trigger upload error
+    await user.click(screen.getByTestId("trigger-upload-error"));
+    expect(screen.getByText(/Failed to upload file/i)).toBeInTheDocument();
+    // Type and send a message — should clear the error
+    await user.type(screen.getByPlaceholderText(/share what/i), "hello");
+    await user.keyboard("{Enter}");
+    expect(screen.queryByText(/Failed to upload file/i)).not.toBeInTheDocument();
   });
 });

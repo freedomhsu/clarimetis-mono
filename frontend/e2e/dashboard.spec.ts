@@ -30,6 +30,8 @@ const fakeAnalytics = {
   confidence_score: 65,
   anxiety_score: 42,
   self_esteem_score: 58,
+  ego_score: 52,
+  emotion_control_score: 67,
   stress_load: 38,
   cognitive_noise: "moderate" as const,
   logic_loops: [
@@ -232,7 +234,7 @@ test.describe("Insights page", () => {
 
   test("the Refresh button re-fetches analytics data", async ({ page }) => {
     let callCount = 0;
-    await page.route(`${API_URL}/api/v1/analytics/summary`, async (route) => {
+    await page.route(`${API_URL}/api/v1/analytics/summary*`, async (route) => {
       callCount++;
       await route.fulfill({
         status: 200,
@@ -318,7 +320,7 @@ test.describe("Dashboard tier UI", () => {
     await page.goto("/dashboard");
     await expect(page.getByText(/good (morning|afternoon|evening)/i)).toBeVisible({ timeout: 8_000 });
     await page.getByRole("button", { name: /manage plan/i }).click();
-    await expect(page.getByRole("button", { name: /manage billing/i })).toBeVisible({ timeout: 4_000 });
+    await expect(page.getByRole("button", { name: /manage billing/i }).last()).toBeVisible({ timeout: 4_000 });
     await expect(page.getByRole("button", { name: /pro monthly/i })).not.toBeVisible();
     await expect(page.getByRole("button", { name: /pro annual/i })).not.toBeVisible();
   });
@@ -386,4 +388,71 @@ test.describe("Dashboard tier UI", () => {
       await expect(page.getByText(/upgrade to pro/i)).not.toBeVisible();
     },
   );
+});
+
+// ── Language picker tests ─────────────────────────────────────────────────────
+
+test.describe("Language picker", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route(`${API_URL}/api/v1/users/sync`, (route) =>
+      route.fulfill({ status: 200, body: "{}" }),
+    );
+    await page.route(`${API_URL}/api/v1/users/me`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...fakeUser, subscription_tier: "free" }),
+      }),
+    );
+    await page.route(`${API_URL}/api/v1/sessions`, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+    );
+    await page.route(`${API_URL}/api/v1/analytics/summary`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(fakeAnalytics),
+      }),
+    );
+  });
+
+  test("language picker button is visible in the sidebar", async ({ page }) => {
+    await page.goto("/dashboard");
+    await expect(page.getByRole("button", { name: /change ai language/i })).toBeVisible({
+      timeout: 8_000,
+    });
+  });
+
+  test("language picker lists all 8 supported languages including Italian", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: /change ai language/i }).click();
+
+    for (const label of ["English", "Español", "Português", "Français", "Italiano", "繁體中文", "日本語", "한국어"]) {
+      await expect(page.getByRole("button", { name: new RegExp(label) })).toBeVisible({
+        timeout: 4_000,
+      });
+    }
+  });
+
+  test("selecting Español closes the picker and updates the displayed language", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: /change ai language/i }).click();
+    await page.getByRole("button", { name: /español/i }).click();
+
+    // Picker should close
+    await expect(page.getByRole("button", { name: /english/i })).not.toBeVisible();
+    // Current language button should now show Español
+    await expect(page.getByRole("button", { name: /change ai language/i })).toContainText("Español");
+  });
+
+  test("selecting Italiano closes the picker and updates the displayed language", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: /change ai language/i }).click();
+    await page.getByRole("button", { name: /italiano/i }).click();
+
+    // Picker should close
+    await expect(page.getByRole("button", { name: /español/i })).not.toBeVisible();
+    // Current language button should now show Italiano
+    await expect(page.getByRole("button", { name: /change ai language/i })).toContainText("Italiano");
+  });
 });

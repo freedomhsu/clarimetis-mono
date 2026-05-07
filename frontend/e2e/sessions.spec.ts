@@ -122,7 +122,7 @@ test.describe("Session management — real API", () => {
     await page.hover(`div.group:has-text("${session.title}")`);
     await page.click(`div.group:has-text("${session.title}") button[aria-label="Delete session"]`, { force: true });
 
-    await expect(page.getByText(session.title)).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(session.title).first()).not.toBeVisible({ timeout: 5_000 });
   });
 });
 

@@ -8,7 +8,7 @@ Covers:
 
 import pytest
 from fastapi import HTTPException
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from tests.conftest import make_user, db_returning
 from app.middleware.subscription import check_message_quota, get_current_user, require_pro
@@ -61,8 +61,9 @@ async def test_require_pro_blocks_free_user():
 async def test_check_message_quota_passes_pro_user_without_db_query():
     user = make_user(subscription_tier="pro")
     db = AsyncMock()
+    mock_settings = MagicMock(free_daily_message_limit=5)
 
-    result = await check_message_quota(user=user, db=db)
+    result = await check_message_quota(user=user, db=db, settings=mock_settings)
 
     assert result is user
     db.scalar.assert_not_called()  # pro users skip the count query entirely
@@ -74,8 +75,7 @@ async def test_check_message_quota_passes_free_user_under_limit():
     db.scalar.return_value = 2  # 2 messages sent today, limit is 5
 
     mock_settings = MagicMock(free_daily_message_limit=5)
-    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
-        result = await check_message_quota(user=user, db=db)
+    result = await check_message_quota(user=user, db=db, settings=mock_settings)
 
     assert result is user
 
@@ -86,9 +86,8 @@ async def test_check_message_quota_blocks_free_user_at_limit():
     db.scalar.return_value = 5  # exactly at the limit
 
     mock_settings = MagicMock(free_daily_message_limit=5)
-    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
-        with pytest.raises(HTTPException) as exc_info:
-            await check_message_quota(user=user, db=db)
+    with pytest.raises(HTTPException) as exc_info:
+        await check_message_quota(user=user, db=db, settings=mock_settings)
 
     assert exc_info.value.status_code == 429
     detail = exc_info.value.detail
@@ -103,9 +102,8 @@ async def test_check_message_quota_blocks_free_user_over_limit():
     db.scalar.return_value = 10  # well over the limit
 
     mock_settings = MagicMock(free_daily_message_limit=5)
-    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
-        with pytest.raises(HTTPException) as exc_info:
-            await check_message_quota(user=user, db=db)
+    with pytest.raises(HTTPException) as exc_info:
+        await check_message_quota(user=user, db=db, settings=mock_settings)
 
     assert exc_info.value.status_code == 429
 
@@ -117,7 +115,6 @@ async def test_check_message_quota_treats_null_count_as_zero():
     db.scalar.return_value = None
 
     mock_settings = MagicMock(free_daily_message_limit=5)
-    with patch("app.middleware.subscription.get_settings", return_value=mock_settings):
-        result = await check_message_quota(user=user, db=db)
+    result = await check_message_quota(user=user, db=db, settings=mock_settings)
 
     assert result is user

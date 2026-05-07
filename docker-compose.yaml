@@ -12,8 +12,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Run migrations in order on first start
-      - ./backend/migrations/init.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ./backend/migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
       - ./backend/migrations/002_user_profiles_sentiment.sql:/docker-entrypoint-initdb.d/002_user_profiles_sentiment.sql
+      - ./backend/migrations/003_knowledge_docs.sql:/docker-entrypoint-initdb.d/003_knowledge_docs.sql
+      - ./backend/migrations/004_subscription_tier_constraint.sql:/docker-entrypoint-initdb.d/004_subscription_tier_constraint.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wellness -d wellness_db"]
       interval: 5s
@@ -57,6 +59,8 @@ services:
       - ./frontend/.env.local
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Server-side proxy route must use the Docker service name, not localhost
+      BACKEND_URL: http://backend:8080
     ports:
       - "3000:3000"
     volumes:

@@ -165,7 +165,7 @@ test.describe("Crisis banner", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await page.getByPlaceholder(/share what's on your mind/i).fill(userContent);
+    await page.getByPlaceholder(/share what/i).fill(userContent);
     await page.getByRole("button", { name: /send/i }).click();
 
     // CrisisBanner renders when crisis_flagged is inferred from stream content

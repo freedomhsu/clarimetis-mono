@@ -2,90 +2,68 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { api, SubscriptionError } from "@/lib/api";
+import { api, type SubscriptionError } from "@/lib/api";
+import { useMediaRecorder } from "./useMediaRecorder";
 
-type VoiceState = "idle" | "recording" | "processing";
+export type VoiceState = "idle" | "recording" | "processing";
 
+/**
+ * Transcription-only voice hook for the chat MessageInput bar.
+ * Records audio → calls /voice/transcribe → invokes onTranscript with the text.
+ *
+ * The underlying MediaRecorder lifecycle (getUserMedia, timers, cleanup, codec
+ * selection, auto-stop) is fully managed by useMediaRecorder.
+ */
 export function useVoice(
   onTranscript: (text: string) => void,
   onSubscriptionError?: (err: SubscriptionError) => void,
 ) {
   const { getToken } = useAuth();
-  const [state, setState] = useState<VoiceState>("idle");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
 
-  // Stop the recorder and release the microphone if the component unmounts
-  // while a recording is in progress.
-  useEffect(() => {
-    return () => {
-      const recorder = recorderRef.current;
-      if (recorder && recorder.state !== "inactive") {
-        // Detach onstop so transcription isn't attempted on an unmounted component
-        recorder.onstop = null;
-        recorder.stop();
-      }
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
-  }, []);
+  // Cancel any in-flight transcription request on unmount.
+  useEffect(() => () => { fetchAbortRef.current?.abort(); }, []);
 
-  const startRecording = useCallback(async () => {
-    setError(null);
+  const handleStop = useCallback(async (blob: Blob) => {
+    setIsProcessing(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      // Prefer webm/opus; fall back to browser default
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "";
-
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        setState("processing");
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        stream.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-
-        try {
-          const token = await getToken();
-          if (!token) throw new Error("Not authenticated");
-          const result = await api.transcribeAudio(token, blob);
-          if (result.transcript) {
-            onTranscript(result.transcript);
-          }
-        } catch (err) {
-          const subErr = (err as { subscriptionError?: SubscriptionError }).subscriptionError;
-          if (subErr && onSubscriptionError) {
-            onSubscriptionError(subErr);
-          } else {
-            setError("Transcription failed. Please try again.");
-          }
-        } finally {
-          setState("idle");
-        }
-      };
-
-      recorderRef.current = recorder;
-      recorder.start();
-      setState("recording");
-    } catch {
-      setError("Microphone access denied.");
-      setState("idle");
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+      const abort = new AbortController();
+      fetchAbortRef.current = abort;
+      const result = await api.transcribeAudio(token, blob, abort.signal);
+      fetchAbortRef.current = null;
+      if (result.transcript) onTranscript(result.transcript);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      const subErr = (err as { subscriptionError?: SubscriptionError }).subscriptionError;
+      if (subErr && onSubscriptionError) {
+        onSubscriptionError(subErr);
+      } else {
+        // Prefer the backend's own message (e.g. "Recording was too short") over
+        // a hardcoded fallback; fall back only when the message looks like a raw
+        // HTTP status string ("4xx: …") or is absent.
+        const msg = err instanceof Error ? err.message : "";
+        setError(
+          msg && !msg.match(/^\d{3}:/)
+            ? msg
+            : "Transcription failed. Please try again.",
+        );
+      }
+    } finally {
+      setIsProcessing(false);
     }
-  }, [getToken, onTranscript]);
+  }, [getToken, onTranscript, onSubscriptionError]);
 
-  const stopRecording = useCallback(() => {
-    recorderRef.current?.stop();
-  }, []);
+  const { isRecording, recordingSeconds, start, stop } = useMediaRecorder({
+    onStop: handleStop,
+    onError: (msg) => setError(msg),
+  });
 
-  return { state, error, startRecording, stopRecording };
+  // Derive a single tri-state from the two independent flags.
+  const state: VoiceState = isRecording ? "recording" : isProcessing ? "processing" : "idle";
+
+  return { state, error, recordingSeconds, startRecording: start, stopRecording: stop };
 }

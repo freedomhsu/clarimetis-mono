@@ -39,14 +39,17 @@ const starterPrompts = [
 /** Shows the live agent status message while thinking. */
 function ThinkingIndicator({ status }: { status: string }) {
   return (
-    <div className="flex justify-start mb-4">
-      <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2 min-w-[200px]">
+    <div className="flex justify-start mb-5 items-start">
+      <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mr-2.5 mt-0.5 shadow-md shadow-indigo-900/20">
+        <Brain size={13} className="text-white" />
+      </div>
+      <div className="bg-white dark:bg-[#13131f] border border-slate-200 dark:border-indigo-900/40 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2.5">
         <span className="flex gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce [animation-delay:300ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:300ms]" />
         </span>
-        <span className="text-xs text-zinc-400 dark:text-zinc-500">
+        <span className="text-xs text-slate-500 dark:text-slate-500">
           {status || "Thinking…"}
         </span>
       </div>
@@ -58,7 +61,9 @@ interface Props {
   sessionId: string;
   sessionTitle?: string;
   tier?: "free" | "pro";
-  onSend?: (content: string) => void;
+  /** Called whenever the loading/streaming state changes so the parent can
+   * show a per-session indicator in the sidebar. */
+  onLoadingChange?: (isLoading: boolean) => void;
 }
 
 /** Renders a temporary streaming bubble while the assistant is typing. */
@@ -157,7 +162,7 @@ function UpgradeGate({
   );
 }
 
-export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
+export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingChange }: Props) {
   const { isLoaded: clerkLoaded } = useAuth();
   const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration } =
     useChat(sessionId);
@@ -177,59 +182,114 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
     if (subscriptionError) setDismissedError(false);
   }, [subscriptionError]);
 
+  // Notify parent when loading state changes so it can show a per-session
+  // indicator in the sidebar even while this window is hidden.
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [isLoading, onLoadingChange]);
+
   return (
     <div className="flex flex-col h-full">
 
       {/* ── Persistent header ── */}
-      <div className="shrink-0 border-b border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-zinc-950 px-4 py-3">
-        {/* Session title row */}
-        <div className="flex items-center gap-2 mb-2.5">
-          <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950 border border-teal-200/50 dark:border-teal-800/30 flex items-center justify-center shrink-0">
-            <MessageCircle size={14} className="text-teal-700 dark:text-teal-400" />
-          </div>
-          <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
-            {sessionTitle || "Coaching Session"}
-          </span>
-          {tier === "free" && (
-            <span className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 text-[10px] font-medium text-zinc-500 dark:text-zinc-500">
-              <Lock size={8} />
-              Free · 5/day
-            </span>
-          )}
-          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 text-[10px] font-medium text-zinc-500 dark:text-zinc-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Live
-          </span>
+      <div className="shrink-0 relative overflow-hidden bg-white dark:bg-[#0c0c18]">
+        {/* Ambient depth layers (dark mode only) */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-0 left-0 w-40 h-full bg-gradient-to-r from-indigo-600/[0.06] to-transparent" />
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-violet-600/[0.05] to-transparent" />
+          <div className="absolute -top-3 left-12 w-20 h-10 rounded-full bg-indigo-500/10 blur-2xl" />
         </div>
 
-        {/* Trust signal pills */}
-        <div className="flex gap-1.5 flex-wrap">
-          {trustSignals.map(({ icon: Icon, label }) => (
+        {/* Bottom border — gradient fade for depth */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 dark:via-indigo-500/30 to-transparent" />
+
+        {/* Main title row */}
+        <div className="relative flex items-center gap-3 px-5 pt-4 pb-2.5">
+          {/* Icon — larger with layered glow */}
+          <div className="relative shrink-0">
+            <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-br from-indigo-500/35 to-violet-600/35 blur-xl" />
+            <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-900/30 ring-1 ring-white/[0.12]">
+              <Brain size={18} className="text-white drop-shadow" />
+            </div>
+          </div>
+
+          {/* Title + tagline */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-[13px] font-semibold tracking-tight text-slate-800 dark:text-slate-100 truncate">
+                {sessionTitle || "Coaching Session"}
+              </p>
+              {tier === "free" && (
+                <span className="shrink-0 inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/50 text-indigo-400 dark:text-indigo-500 uppercase tracking-widest">
+                  <Lock size={7} />
+                  Free
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] font-semibold tracking-wide bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 bg-clip-text text-transparent truncate">
+              End Social Fear, Talk Freely
+            </p>
+          </div>
+
+          {/* Live badge */}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-full bg-emerald-400/25 blur-md" />
+            <span className="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/50 dark:border-emerald-700/40 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/60" />
+              Live
+            </span>
+          </div>
+        </div>
+
+        {/* Trust signals — icon-in-box + label, pipe-separated */}
+        <div className="relative px-5 pb-4 flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+          {trustSignals.map(({ icon: Icon, label }, i) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.05] text-[10px] font-medium text-zinc-400 dark:text-zinc-600"
+              className={`inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-default${i > 0 ? " ml-3 pl-3 border-l border-slate-200 dark:border-white/[0.08]" : ""}`}
             >
-              <Icon size={9} className="text-zinc-400 dark:text-zinc-600" />
-              {label}
+              <span className="w-[18px] h-[18px] rounded-md bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-100 dark:border-indigo-800/50 flex items-center justify-center shrink-0">
+                <Icon size={9} className="text-indigo-500 dark:text-indigo-400" />
+              </span>
+              <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                {label}
+              </span>
             </span>
           ))}
         </div>
       </div>
 
       {/* ── Messages area ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-zinc-50 dark:bg-[#0a0a0a]">
+      <div className="flex-1 overflow-y-auto px-4 py-5 bg-slate-50 dark:bg-[#080810]">
         {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-8 px-4 max-w-md mx-auto">
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950 border border-teal-200/50 dark:border-teal-800/30 flex items-center justify-center mx-auto mb-4">
-                <Brain size={24} className="text-teal-700 dark:text-teal-400" />
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 max-w-sm mx-auto">
+            {/* Hero icon with ambient glow */}
+            <div className="relative mb-6">
+              <div className="absolute -inset-6 rounded-full bg-gradient-to-br from-indigo-500/10 to-violet-500/10 blur-3xl" />
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-2xl shadow-indigo-500/25 flex items-center justify-center">
+                <Brain size={32} className="text-white" />
               </div>
-              <p className="text-base font-semibold text-zinc-700 dark:text-zinc-200">
-                How are you doing today?
-              </p>
-              <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
-                Share what&apos;s on your mind — I&apos;m here to listen and help.
-              </p>
+            </div>
+
+            {/* Headline */}
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2 leading-tight">
+              End Social Fear,{" "}
+              <span className="bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
+                Talk Freely
+              </span>
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-500 mb-7 leading-relaxed max-w-xs">
+              Your private AI mental wellness coach — no judgment, always on, completely yours.
+            </p>
+
+            {/* Feature chips */}
+            <div className="flex flex-wrap justify-center gap-1.5 mb-7">
+              {trustSignals.map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-[#13131f] border border-slate-200 dark:border-indigo-900/40 text-[10px] font-medium text-slate-600 dark:text-slate-400 shadow-sm">
+                  <Icon size={9} className="text-indigo-500 dark:text-indigo-400" />
+                  {label}
+                </span>
+              ))}
             </div>
 
             {/* Starter prompts */}
@@ -238,9 +298,11 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free" }: Props) {
                 <button
                   key={text}
                   onClick={() => sendMessage(text)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] rounded-xl text-sm text-left text-zinc-500 dark:text-zinc-400 hover:border-teal-300 dark:hover:border-teal-700/60 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-[#13131f] border border-slate-200 dark:border-indigo-900/40 rounded-xl text-sm text-left text-slate-600 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-700/60 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/30 transition-all duration-150 group shadow-sm"
                 >
-                  <Icon size={14} className="text-teal-600 dark:text-teal-500 shrink-0" />
+                  <span className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/40 flex items-center justify-center shrink-0 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/50 transition-colors">
+                    <Icon size={13} className="text-indigo-500 dark:text-indigo-400" />
+                  </span>
                   {text}
                 </button>
               ))}

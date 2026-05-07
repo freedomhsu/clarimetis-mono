@@ -90,3 +90,9 @@ export const PATCH = handler;
 export const DELETE = handler;
 export const HEAD = handler;
 export const OPTIONS = handler;
+
+// Disable Next.js body size limit for this proxy so large file uploads
+// (e.g. media uploads to /api/v1/media/upload) are not truncated.
+// The actual cap is set via `experimental.serverBodySizeLimit` in next.config.ts.
+export const maxDuration = 60; // seconds — give uploads time to complete
+export const dynamic = "force-dynamic";

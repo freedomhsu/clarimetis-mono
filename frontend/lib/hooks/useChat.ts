@@ -20,9 +20,20 @@ export function useChat(sessionId: string) {
   // Track which sessionId the current messages belong to so we can reset state
   // when the session changes without unmounting the component (avoids flicker).
   const sessionIdRef = useRef(sessionId);
+  // Tracks a pending post-stream refresh so it can be cancelled on unmount.
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
+  }, []);
+
+  // Abort any in-flight stream and cancel any pending refresh when the
+  // component unmounts (e.g. the user navigates away from the chat route).
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current);
+    };
   }, []);
 
   const loadMessages = useCallback(async () => {
@@ -53,7 +64,7 @@ export function useChat(sessionId: string) {
   }, [sessionId]);
 
   const sendMessage = useCallback(
-    async (content: string, mediaUrls?: string[]) => {
+    async (content: string, mediaUrls?: string[], previewUrls?: string[]) => {
       const token = await getToken();
       if (!token) return;
 
@@ -62,13 +73,17 @@ export function useChat(sessionId: string) {
       // BackgroundTask) but only update UI state when still on the same session.
       const capturedSessionId = sessionId;
 
-      // Optimistically add the user message
+      // Optimistically add the user message.
+      // Use previewUrls (signed HTTPS) for display; mediaUrls (blob paths) are
+      // what the backend receives. After the stream completes we schedule a
+      // loadMessages() refresh (see below) to replace this entry with the
+      // server copy carrying re-signed URLs and the accurate crisis_flagged flag.
       const userMsg: Message = {
         id: crypto.randomUUID(),
         session_id: capturedSessionId,
         role: "user",
         content,
-        media_urls: mediaUrls ?? null,
+        media_urls: previewUrls ?? mediaUrls ?? null,
         crisis_flagged: false,
         created_at: new Date().toISOString(),
       };
@@ -106,7 +121,11 @@ export function useChat(sessionId: string) {
         }
 
         // Stream finished — if we're still on the same session, append the
-        // completed assistant message to the UI immediately.
+        // completed assistant message to the UI immediately, then schedule a
+        // refresh so the server copy (with real IDs, re-signed media URLs, and
+        // accurate crisis_flagged) replaces the optimistic entries.
+        // The backend saves the assistant message via BackgroundTask, so we
+        // wait briefly before fetching to let that commit complete.
         if (sessionIdRef.current === capturedSessionId) {
           const isCrisis = accumulated.includes("988lifeline.org");
           const assistantMsg: Message = {
@@ -122,6 +141,30 @@ export function useChat(sessionId: string) {
           setStreamingContent("");
           setThinkingStatus("");
           accumulatedRef.current = "";
+          // Retry-safe refresh: only apply the server copy once it includes the
+          // assistant message (the BackgroundTask may take >600ms to commit).
+          // Retries up to 4 times with increasing delays before giving up.
+          const doRefresh = async (attempt = 0) => {
+            if (sessionIdRef.current !== capturedSessionId) return;
+            try {
+              const token = await getToken();
+              if (!token || sessionIdRef.current !== capturedSessionId) return;
+              const serverMsgs = await api.getMessages(token, capturedSessionId);
+              if (sessionIdRef.current !== capturedSessionId) return;
+              const lastMsg = serverMsgs[serverMsgs.length - 1];
+              if (lastMsg?.role === "assistant") {
+                setMessages(serverMsgs);
+              } else if (attempt < 4) {
+                refreshTimeoutRef.current = setTimeout(
+                  () => doRefresh(attempt + 1),
+                  800 * (attempt + 1),
+                );
+              }
+            } catch {
+              // Refresh errors are non-fatal — optimistic message stays visible
+            }
+          };
+          refreshTimeoutRef.current = setTimeout(() => doRefresh(), 800);
         }
         // If the session changed, the backend saves the message via BackgroundTask.
         // When the user returns to this session, loadMessages() will fetch it.
@@ -168,7 +211,7 @@ export function useChat(sessionId: string) {
         }
       }
     },
-    [getToken, sessionId]
+    [getToken, sessionId, loadMessages]
   );
 
   return { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration };

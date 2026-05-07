@@ -47,6 +47,9 @@ async def test_stream_chat_response_yields_chunks():
          patch("app.services.gemini.asyncio.to_thread", side_effect=_fake_to_thread), \
          patch("app.services.gemini.get_settings") as mock_settings:
         mock_settings.return_value.gemini_pro_model = "gemini-2.5-pro"
+        mock_settings.return_value.gemini_stream_timeout = 30.0
+        mock_settings.return_value.gemini_temperature = 0.7
+        mock_settings.return_value.gemini_max_output_tokens = 8192
         result = await _collect(stream_chat_response("Hi", [], []))
 
     assert result == ["Hello", " there"]
@@ -100,6 +103,9 @@ async def test_stream_chat_response_empty_chunks():
          patch("app.services.gemini.init_vertexai"), \
          patch("app.services.gemini.get_settings") as mock_settings:
         mock_settings.return_value.gemini_pro_model = "gemini-2.5-pro"
+        mock_settings.return_value.gemini_stream_timeout = 30.0
+        mock_settings.return_value.gemini_temperature = 0.7
+        mock_settings.return_value.gemini_max_output_tokens = 8192
         result = await _collect(stream_chat_response("Hi", [], []))
 
     assert result == []

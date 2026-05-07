@@ -49,7 +49,7 @@ describe("api internal request()", () => {
 
   it("throws a plain Error on non-subscription error responses", async () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "not found" }, 404));
-    await expect(api.getSessions("tok")).rejects.toThrow("404");
+    await expect(api.getSessions("tok")).rejects.toThrow("not found");
   });
 
   it("attaches .subscriptionError on 402 with detail.code", async () => {
@@ -71,7 +71,7 @@ describe("api internal request()", () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "payment required" }, 402));
     const err = await api.getSessions("tok").catch((e) => e);
     expect(err.subscriptionError).toBeUndefined();
-    expect(err.message).toMatch("402");
+    expect(err.message).toMatch("payment required");
   });
 });
 
@@ -133,6 +133,90 @@ describe("api.deleteSession()", () => {
 
   it("throws plain Error on 404", async () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "not found" }, 404));
-    await expect(api.deleteSession("tok", "s1")).rejects.toThrow("Failed to delete session");
+    await expect(api.deleteSession("tok", "s1")).rejects.toThrow("not found");
+  });
+});
+
+// ── getMessages ────────────────────────────────────────────────────────────
+
+describe("api.getMessages()", () => {
+  it("returns an array of messages on success", async () => {
+    const msgs = [
+      { id: "m1", session_id: "s1", role: "user", content: "hi", media_urls: null, crisis_flagged: false, created_at: new Date().toISOString() },
+    ];
+    mockFetch.mockResolvedValue(jsonResponse(msgs));
+    const result = await api.getMessages("tok", "s1");
+    expect(result).toEqual(msgs);
+  });
+
+  it("requests the correct URL path", async () => {
+    mockFetch.mockResolvedValue(jsonResponse([]));
+    await api.getMessages("tok", "sess-abc");
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/sessions\/sess-abc\/messages/);
+  });
+
+  it("throws on non-200 response", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ detail: "forbidden" }, 403));
+    await expect(api.getMessages("tok", "s1")).rejects.toThrow("forbidden");
+  });
+});
+
+// ── createSession / renameSession ──────────────────────────────────────────
+
+describe("api.createSession()", () => {
+  it("returns the created session", async () => {
+    const session = { id: "s1", title: "New Session", summary: null, created_at: "", updated_at: "" };
+    mockFetch.mockResolvedValue(jsonResponse(session));
+    const result = await api.createSession("tok");
+    expect(result.id).toBe("s1");
+  });
+
+  it("sends a POST request", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ id: "s1", title: "t", summary: null, created_at: "", updated_at: "" }));
+    await api.createSession("tok", "Custom title");
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("POST");
+    expect(init.body).toContain("Custom title");
+  });
+});
+
+describe("api.renameSession()", () => {
+  it("returns the updated session with the new title", async () => {
+    const updated = { id: "s1", title: "Renamed", summary: null, created_at: "", updated_at: "" };
+    mockFetch.mockResolvedValue(jsonResponse(updated));
+    const result = await api.renameSession("tok", "s1", "Renamed");
+    expect(result.title).toBe("Renamed");
+  });
+
+  it("sends a PATCH request with the new title in the body", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ id: "s1", title: "Renamed", summary: null, created_at: "", updated_at: "" }));
+    await api.renameSession("tok", "s1", "Renamed");
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/sessions\/s1/);
+    expect(init.method).toBe("PATCH");
+    expect(init.body).toContain("Renamed");
+  });
+});
+
+// ── sendMessage with mediaUrls ─────────────────────────────────────────────
+
+describe("api.sendMessage() — media", () => {
+  it("includes media_urls in the request body when provided", async () => {
+    const stream = new ReadableStream();
+    mockFetch.mockResolvedValue(new Response(stream, { status: 200 }));
+    await api.sendMessage("tok", "s1", "look at this", ["uploads/img.png"]);
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.media_urls).toEqual(["uploads/img.png"]);
+  });
+
+  it("sends media_urls=null when no mediaUrls are provided", async () => {
+    const stream = new ReadableStream();
+    mockFetch.mockResolvedValue(new Response(stream, { status: 200 }));
+    await api.sendMessage("tok", "s1", "hello");
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.media_urls).toBeNull();
   });
 });

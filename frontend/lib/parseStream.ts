@@ -66,5 +66,19 @@ export function parseStreamChunk(
     newBuffer = "";
   }
 
+  // Guard against the SENTINEL being split across two network chunks.
+  // If `acc` ends with a prefix of SENTINEL, hold those bytes back so the
+  // next chunk gets a chance to complete the match instead of treating them
+  // as real content (which would render as visible garbage characters).
+  if (!newBuffer) {
+    for (let len = Math.min(SENTINEL.length - 1, acc.length); len >= 1; len--) {
+      if (acc.endsWith(SENTINEL.slice(0, len))) {
+        newBuffer = acc.slice(-len);
+        acc = acc.slice(0, -len);
+        break;
+      }
+    }
+  }
+
   return { accumulated: acc, buffer: newBuffer, statusUpdates, contentChanged };
 }

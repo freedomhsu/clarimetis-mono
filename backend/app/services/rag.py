@@ -1,8 +1,10 @@
+import json
 import uuid
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.models.message import Message
 from app.models.user_profile import UserProfile
 from app.services.embeddings import embed_text
@@ -12,10 +14,11 @@ async def get_relevant_context(
     db: AsyncSession,
     user_id: uuid.UUID,
     query: str,
-    limit: int = 5,
+    limit: int | None = None,
     embedding: list[float] | None = None,
 ) -> list[str]:
     """Return the top-k semantically similar past messages for the given user."""
+    resolved_limit = limit if limit is not None else get_settings().rag_context_limit
     query_embedding = embedding if embedding is not None else await embed_text(query)
 
     stmt = text(
@@ -33,8 +36,8 @@ async def get_relevant_context(
         stmt,
         {
             "user_id": str(user_id),
-            "embedding": str(query_embedding),
-            "limit": limit,
+            "embedding": json.dumps(query_embedding),
+            "limit": resolved_limit,
         },
     )
     rows = result.fetchall()
@@ -44,7 +47,7 @@ async def get_relevant_context(
 async def get_tier1_context(
     db: AsyncSession,
     query: str,
-    limit: int = 3,
+    limit: int | None = None,
     embedding: list[float] | None = None,
 ) -> list[str]:
     """Return the top-k most relevant Tier-1 knowledge docs for the given query.
@@ -52,6 +55,7 @@ async def get_tier1_context(
     Returns empty list if the knowledge_docs table is not yet seeded.
     """
     try:
+        resolved_limit = limit if limit is not None else get_settings().rag_tier1_limit
         query_embedding = embedding if embedding is not None else await embed_text(query)
         stmt = text(
             """
@@ -64,7 +68,7 @@ async def get_tier1_context(
         )
         result = await db.execute(
             stmt,
-            {"embedding": str(query_embedding), "limit": limit},
+            {"embedding": json.dumps(query_embedding), "limit": resolved_limit},
         )
         rows = result.fetchall()
         return [f"[{row.category}] {row.title}\n{row.content}" for row in rows]

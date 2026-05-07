@@ -1,8 +1,12 @@
+"use client";
+
+import { useI18n } from "@/components/providers/I18nContext";
+
 export function Disclaimer() {
+  const { t } = useI18n();
   return (
     <p className="text-xs text-gray-400 text-center py-1.5">
-      AI life coach — not a licensed therapist. In a crisis, call or text&nbsp;
-      <strong>988</strong>&nbsp;(US).
+      {t("disclaimer")}
     </p>
   );
 }

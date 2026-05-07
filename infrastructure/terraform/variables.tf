@@ -123,3 +123,9 @@ variable "langfuse_base_url" {
   type    = string
   default = "https://us.cloud.langfuse.com"
 }
+
+variable "custom_domain" {
+  description = "Custom domain to map to the frontend Cloud Run service (e.g. staging.clarimetis.com). Leave empty to use the auto-generated Cloud Run URL."
+  type        = string
+  default     = ""
+}

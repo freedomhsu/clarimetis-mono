@@ -6,9 +6,8 @@ from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.config import EMBEDDING_DIM
 from app.database import Base
-
-EMBEDDING_DIM = 768  # text-embedding-004
 
 
 class Message(Base):
