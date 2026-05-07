@@ -4,10 +4,18 @@ All tests run without a real database or external services.
 The SQLAlchemy AsyncSession and all GCP/Stripe/Clerk calls are mocked.
 """
 
+import os
 import sys
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
+
+# ── Override DATABASE_URL to SQLite before any app code is imported ────────
+# app/database.py creates the SQLAlchemy engine at import time using the URL
+# from settings (which reads .env).  Using a real PostgreSQL URL causes asyncpg
+# to open a connection pool whose cleanup races with the test event loop.
+# Pointing to SQLite in-memory avoids any real network connections in tests.
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 # ── Stub heavy GCP/cloud modules before any app code is imported ───────────
 # These modules call vertexai.init() and connect to GCP at import time.
@@ -15,10 +23,14 @@ from unittest.mock import AsyncMock, MagicMock
 _STUB_MODULES = [
     "google",
     "google.auth",
+    "google.auth.credentials",
+    "google.auth.transport",
+    "google.auth.transport.requests",
     "google.oauth2",
     "google.oauth2.service_account",
     "google.cloud",
     "google.cloud.aiplatform",
+    "google.cloud.documentai",
     "google.cloud.speech",
     "google.cloud.storage",
     "google.cloud.texttospeech",
@@ -48,12 +60,57 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from unittest.mock import patch
 
 from app.database import get_db
 from app.main import app as _app
 from app.middleware.auth import get_current_user_id
 from app.models.message import Message
 from app.models.session import ChatSession
+
+
+# ── Patch AsyncSessionLocal globally so background tasks don't hit real DB ──
+# Background tasks (e.g. _save_assistant_message) create their own DB sessions
+# via AsyncSessionLocal instead of using the injected `get_db`.  Without this
+# patch they would connect to the real PostgreSQL during tests.
+
+def _make_async_session_mock():
+    """Return a fresh async context-manager mock for AsyncSessionLocal."""
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    session.delete = AsyncMock()
+    session.rollback = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    result.scalars.return_value.all.return_value = []
+    session.execute = AsyncMock(return_value=result)
+
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return cm
+
+
+_async_session_patcher = patch(
+    "app.routers.chat.AsyncSessionLocal",
+    side_effect=_make_async_session_mock,
+)
+_async_session_patcher.start()
+
+_profile_session_patcher = patch(
+    "app.services.profile.AsyncSessionLocal",
+    side_effect=_make_async_session_mock,
+)
+_profile_session_patcher.start()
+
+_evaluation_session_patcher = patch(
+    "app.services.evaluation.AsyncSessionLocal",
+    side_effect=_make_async_session_mock,
+)
+_evaluation_session_patcher.start()
+
 from app.models.user import User
 
 
@@ -66,6 +123,7 @@ def make_user(
     subscription_tier: str = "free",
     stripe_customer_id: str | None = "cus_test",
     stripe_subscription_id: str | None = None,
+    storage_used_bytes: int = 0,
 ) -> User:
     now = datetime.now(timezone.utc)
     return User(
@@ -76,6 +134,7 @@ def make_user(
         subscription_tier=subscription_tier,
         stripe_customer_id=stripe_customer_id,
         stripe_subscription_id=stripe_subscription_id,
+        storage_used_bytes=storage_used_bytes,
         created_at=now,
         updated_at=now,
     )
@@ -106,6 +165,7 @@ def make_message(
         content=content,
         media_urls=[],
         crisis_flagged=crisis_flagged,
+        created_at=datetime.now(timezone.utc),
     )
 
 

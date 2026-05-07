@@ -1,0 +1,55 @@
+project_id    = "clarimetis-staging"   # create a new GCP project for staging
+region        = "us-central1"
+environment   = "staging"
+github_repo   = "freedomhsu/clarimetis-mono"
+
+# Cloud SQL — db-f1-micro keeps cost near zero at staging volumes
+# Upgrade to db-g1-small if you see performance issues under load testing.
+cloudsql_tier = "db-f1-micro"
+
+# ── Container images ──────────────────────────────────────────────────────────
+# Point at a staging tag or :latest once CI/CD pushes to the staging registry.
+backend_image  = "us-central1-docker.pkg.dev/clarimetis-staging/clarimetis/backend:latest"
+frontend_image = "us-central1-docker.pkg.dev/clarimetis-staging/clarimetis/frontend:latest"
+
+# ── Database ──────────────────────────────────────────────────────────────────
+# Socket format — fill in after the first `terraform apply` reveals the instance name.
+database_url = "postgresql+asyncpg://wellness:<DB_PASSWORD>@/wellness_db?host=/cloudsql/clarimetis-staging:us-central1:clarimetis-db-staging"
+db_password  = "<DB_PASSWORD>"
+
+# ── Clerk ─────────────────────────────────────────────────────────────────────
+# Create a separate "Staging" Clerk application — free tier covers this.
+# Use test/dev keys (pk_test_... / sk_test_...) — never prod keys in staging.
+clerk_secret_key      = "sk_test_..."
+clerk_jwt_issuer      = "https://<your-staging-clerk-domain>.clerk.accounts.dev"
+clerk_publishable_key = "pk_test_..."
+
+# ── Stripe ────────────────────────────────────────────────────────────────────
+# Use Stripe test-mode keys — no real charges.
+# Re-use the same test keys as dev, or create a separate restricted key.
+stripe_secret_key           = "sk_test_..."
+stripe_webhook_secret       = "whsec_..."
+stripe_pro_monthly_price_id = "price_..."
+stripe_pro_annual_price_id  = "price_..."
+
+# ── GCP ───────────────────────────────────────────────────────────────────────
+gcs_bucket_name = "clarimetis-media-staging"
+
+# ── App ───────────────────────────────────────────────────────────────────────
+# Option A — custom domain (no load balancer needed, Google manages TLS):
+#   1. Run: gcloud domains verify staging.clarimetis.com --project=clarimetis-staging
+#   2. Set custom_domain below and apply. Terraform will output the DNS records.
+#   3. Add a CNAME record in your registrar: staging.clarimetis.com → ghs.googlehosted.com
+#   4. Update cors_origins and frontend_url to use the custom domain.
+#
+# Option B — use the auto-generated Cloud Run URL (zero setup):
+#   Leave custom_domain="" and fill in the auto-generated URL after the first apply.
+custom_domain = "staging.clarimetis.com"  # or "" to skip
+cors_origins  = "https://staging.clarimetis.com"
+frontend_url  = "https://staging.clarimetis.com"
+
+# ── Langfuse ──────────────────────────────────────────────────────────────────
+# Optional — leave blank to disable observability in staging.
+langfuse_public_key = ""
+langfuse_secret_key = ""
+langfuse_base_url   = "https://us.cloud.langfuse.com"

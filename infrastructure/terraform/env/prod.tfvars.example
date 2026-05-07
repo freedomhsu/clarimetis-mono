@@ -20,8 +20,9 @@ stripe_pro_annual_price_id  = "price_..."
 gcs_bucket_name = "clarimetis-media-prod"
 
 # ── App ───────────────────────────────────────────────────────────────────────
-cors_origins = "https://clarimetis.com"
-frontend_url = "https://clarimetis.com"
+custom_domain = "clarimetis.com"
+cors_origins  = "https://clarimetis.com"
+frontend_url  = "https://clarimetis.com"
 
 # ── Langfuse ──────────────────────────────────────────────────────────────────
 langfuse_public_key = ""

@@ -339,3 +339,111 @@ describe("useChat — response persistence after stream", () => {
     expect(assistant?.crisis_flagged).toBe(false);
   });
 });
+
+// ── sendMessage — generic error (sendError) ───────────────────────────────
+
+describe("useChat — sendError", () => {
+  it("sets sendError and rolls back optimistic message on a generic API failure", async () => {
+    mockApi.sendMessage.mockRejectedValue(new Error("500: Internal Server Error"));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    expect(result.current.sendError).toBe("Something went wrong. Please try again.");
+    // Optimistic user message must be removed
+    expect(result.current.messages.find((m) => m.role === "user")).toBeUndefined();
+  });
+
+  it("clears sendError when setSendError(null) is called", async () => {
+    mockApi.sendMessage.mockRejectedValue(new Error("500: error"));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+    expect(result.current.sendError).not.toBeNull();
+
+    act(() => {
+      result.current.setSendError(null);
+    });
+
+    expect(result.current.sendError).toBeNull();
+  });
+
+  it("resets isLoading to false even after a generic error", async () => {
+    mockApi.sendMessage.mockRejectedValue(new Error("503: unavailable"));
+
+    const { result } = renderHook(() => useChat("sess1"));
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    expect(result.current.isLoading).toBe(false);
+  });
+});
+
+// ── session switch mid-stream ─────────────────────────────────────────────
+
+describe("useChat — session switch during stream", () => {
+  it("does NOT append the assistant message to UI when session changes mid-stream", async () => {
+    const encoder = new TextEncoder();
+    let controllerRef: ReadableStreamDefaultController<Uint8Array>;
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controllerRef = controller;
+        // Yield nothing yet — stream stays open
+      },
+    });
+    mockApi.sendMessage.mockResolvedValue(stream);
+    mockApi.getMessages.mockResolvedValue([]);
+
+    const { result, rerender } = renderHook(
+      ({ sid }: { sid: string }) => useChat(sid),
+      { initialProps: { sid: "sess1" } },
+    );
+
+    // Start a send on sess1
+    act(() => { void result.current.sendMessage("hello"); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    // Switch to sess2 before the stream finishes
+    rerender({ sid: "sess2" });
+
+    // Finish the stream now (sess1's response)
+    await act(async () => {
+      controllerRef!.enqueue(encoder.encode("answer from sess1"));
+      controllerRef!.close();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // sess2 messages should be empty — sess1's response must not have been appended
+    const assistantMsg = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistantMsg).toBeUndefined();
+  });
+
+  it("resets messages to [] when sessionId prop changes", async () => {
+    mockApi.getMessages.mockResolvedValue([]);
+
+    const { result, rerender } = renderHook(
+      ({ sid }: { sid: string }) => useChat(sid),
+      { initialProps: { sid: "sess1" } },
+    );
+
+    // Manually put a message into state by completing a stream
+    mockApi.sendMessage.mockResolvedValue(makeStream("response"));
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+    expect(result.current.messages.length).toBeGreaterThan(0);
+
+    // Switching session id must clear messages immediately
+    rerender({ sid: "sess2" });
+    expect(result.current.messages).toHaveLength(0);
+  });
+});

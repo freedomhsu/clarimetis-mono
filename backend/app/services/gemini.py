@@ -1,17 +1,47 @@
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator
 
-import vertexai
-
-logger = logging.getLogger(__name__)
+from tenacity import AsyncRetrying, before_sleep_log, retry_if_exception, stop_after_attempt, wait_exponential
 from vertexai.generative_models import Content, GenerationConfig, GenerativeModel, Part
 
 from app.config import get_settings
 from app.services.gateway import SYSTEM_PROMPTS, INTENT_WELLNESS_COACH
 from app.services.gcp_credentials import init_vertexai
+from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
+
+logger = logging.getLogger(__name__)
+
+# Sentinel used by the streaming queue — module-level so it is not recreated
+# on every stream_chat_response call.
+_SENTINEL = object()
+
+
+def _is_transient_gemini_error(exc: BaseException) -> bool:
+    """Return True for errors worth retrying (503, 429, transient gRPC failures)."""
+    if isinstance(exc, asyncio.TimeoutError):
+        return False
+    name = type(exc).__name__
+    msg = str(exc).lower()
+    return (
+        name in {"ServiceUnavailable", "ResourceExhausted", "DeadlineExceeded", "InternalServerError"}
+        or "503" in msg
+        or "429" in msg
+        or "temporarily unavailable" in msg
+        or "quota exceeded" in msg
+    )
+
+
+_GEMINI_RETRY: dict = dict(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception(_is_transient_gemini_error),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
 
 # Langfuse tracing — only active when keys are configured.
 # The @observe decorator must be defined at module level (before function definitions),
@@ -40,6 +70,11 @@ else:
 # Keep the original default prompt accessible as a fallback constant
 _DEFAULT_SYSTEM_PROMPT = SYSTEM_PROMPTS[INTENT_WELLNESS_COACH]
 
+# Trusted GCS hostname — used to convert legacy signed HTTPS URLs to gs:// URIs.
+_GCS_HTTPS_RE = re.compile(
+    r"https://storage\.googleapis\.com/(?P<bucket>[^/?]+)/(?P<blob>[^?]+)"
+)
+
 
 @observe(name="stream_chat_response")
 async def stream_chat_response(
@@ -50,11 +85,13 @@ async def stream_chat_response(
     media_urls: list[str] | None = None,
     system_prompt: str | None = None,
     profile_context: str | None = None,
+    model_name: str | None = None,
 ) -> AsyncGenerator[str, None]:
     init_vertexai()
     logger.info("[Langfuse] trace: stream_chat_response started")
     effective_prompt = system_prompt or _DEFAULT_SYSTEM_PROMPT
-    model = GenerativeModel(get_settings().gemini_pro_model, system_instruction=effective_prompt)
+    resolved_model = model_name or get_settings().gemini_pro_model
+    model = GenerativeModel(resolved_model, system_instruction=effective_prompt)
 
     prefix_parts: list[str] = []
     if profile_context:
@@ -70,6 +107,70 @@ async def stream_chat_response(
 
     parts = [Part.from_text(context_prefix + user_message)]
 
+    # Attach media — use Document AI sidecar text for PDFs (accurate OCR),
+    # gs:// URI for other blob paths, or inline bytes for legacy HTTPS URLs.
+    if media_urls:
+        bucket = get_settings().gcs_bucket_name
+        for url in media_urls:
+            # Strip query string for extension detection (signed URLs have long params)
+            lower = url.lower().split("?")[0]
+            if lower.endswith(".pdf"):
+                mime = "application/pdf"
+            elif lower.endswith(".png"):
+                mime = "image/png"
+            elif lower.endswith(".gif"):
+                mime = "image/gif"
+            elif lower.endswith(".webp"):
+                mime = "image/webp"
+            elif lower.endswith(".mp4"):
+                mime = "video/mp4"
+            elif lower.endswith(".webm"):
+                mime = "video/webm"
+            elif lower.endswith((".mov", ".qt")):
+                mime = "video/quicktime"
+            else:
+                mime = "image/jpeg"
+
+            try:
+                if url.startswith("uploads/"):
+                    # Blob path — check for a Document AI sidecar first.
+                    # Sidecar exists for PDFs and for images that contained
+                    # enough printed text (e.g. a photo of a lab report).
+                    # When present, the extracted text is more accurate than
+                    # Gemini's native parsing for numbers and medical values.
+                    from app.services.storage import download_text_sidecar
+                    sidecar_text = await download_text_sidecar(url)
+                    if sidecar_text:
+                        parts.append(Part.from_text(
+                            f"[Extracted document text — use this as the authoritative "
+                            f"source for all numbers, values, and facts in the document]\n\n"
+                            f"{sidecar_text}"
+                        ))
+                        logger.debug("Using Document AI sidecar for %s", url)
+                    else:
+                        # No sidecar — pass directly to Gemini (images, videos,
+                        # and PDFs without a processor configured).
+                        parts.append(Part.from_uri(uri=f"gs://{bucket}/{url}", mime_type=mime))
+                else:
+                    # Legacy signed HTTPS URL.
+                    # Convert trusted GCS URLs to gs:// so Vertex accesses the
+                    # file directly — avoids fetching arbitrary bytes into memory
+                    # (SSRF mitigation).  Non-GCS HTTPS URLs are rejected.
+                    m = _GCS_HTTPS_RE.match(url.split("?")[0])
+                    if m:
+                        parts.append(
+                            Part.from_uri(
+                                uri=f"gs://{m.group('bucket')}/{m.group('blob')}",
+                                mime_type=mime,
+                            )
+                        )
+                    else:
+                        logger.warning(
+                            "Skipping non-GCS HTTPS media URL (SSRF prevention): %.100s", url
+                        )
+            except Exception as exc:
+                logger.warning("Failed to attach media %s: %s", url, exc)
+
     # Limit history to last 20 turns to manage context window
     gemini_history = []
     for msg in conversation_history[-20:]:
@@ -79,27 +180,50 @@ async def stream_chat_response(
     chat = model.start_chat(history=gemini_history, response_validation=False)
 
     try:
-        # Run the full streaming call + iteration inside a thread so it never
-        # blocks the event loop. A 120-second hard timeout covers hung responses.
         settings = get_settings()
         gen_config = GenerationConfig(temperature=settings.gemini_temperature, max_output_tokens=settings.gemini_max_output_tokens)
 
-        def _collect_stream() -> list[str]:
-            chunks: list[str] = []
-            for chunk in chat.send_message(parts, generation_config=gen_config, stream=True):
-                if chunk.text:
-                    chunks.append(chunk.text)
-            return chunks
+        # Stream chunks to the caller in real-time via a queue so the client
+        # starts receiving bytes immediately instead of waiting for the full
+        # response.  The blocking SDK iterator runs in a thread; each chunk is
+        # put onto the queue and yielded by the async side as it arrives.
+        # _SENTINEL (module-level) signals end-of-stream.
 
-        chunks = await asyncio.wait_for(
-            asyncio.to_thread(_collect_stream),
-            timeout=120.0,
-        )
-        for chunk in chunks:
-            yield chunk
+        async def _stream_via_queue() -> AsyncGenerator[str, None]:
+            queue: asyncio.Queue = asyncio.Queue()
+
+            def _producer() -> None:
+                try:
+                    for chunk in chat.send_message(
+                        parts, generation_config=gen_config, stream=True
+                    ):
+                        if chunk.text:
+                            queue.put_nowait(chunk.text)
+                except Exception as exc:
+                    queue.put_nowait(exc)
+                finally:
+                    queue.put_nowait(_SENTINEL)
+
+            loop = asyncio.get_running_loop()
+            fut = loop.run_in_executor(None, _producer)
+            try:
+                while True:
+                    item = await asyncio.wait_for(queue.get(), timeout=get_settings().gemini_stream_timeout)
+                    if item is _SENTINEL:
+                        break
+                    if isinstance(item, Exception):
+                        raise item
+                    yield item
+            finally:
+                await fut  # ensure thread is cleaned up
+
+        async for attempt in AsyncRetrying(**_GEMINI_RETRY):
+            with attempt:
+                async for chunk in _stream_via_queue():
+                    yield chunk
         logger.info("[Langfuse] trace: stream_chat_response completed")
     except asyncio.TimeoutError:
-        logger.error("stream_chat_response: Gemini call timed out after 120s")
+        logger.error("stream_chat_response: Gemini call timed out after %ss", get_settings().gemini_stream_timeout)
         yield "I'm sorry, the response took too long. Please try again."
     except Exception as exc:
         logger.error("stream_chat_response: Gemini call failed: %s", exc, exc_info=True)
@@ -112,24 +236,21 @@ async def stream_chat_response(
 
 @observe(name="generate_session_title")
 async def generate_session_title(first_message: str) -> str:
-    init_vertexai()
     logger.info("[Langfuse] trace: generate_session_title started")
+    prompt = (
+        "Generate a concise 4-6 word title for a wellness coaching session that begins with "
+        f"this message. Return only the title, no quotes or punctuation:\n\n{first_message[:500]}"
+    )
     try:
-        model = GenerativeModel(get_settings().gemini_flash_model)
-        prompt = (
-            "Generate a concise 4-6 word title for a wellness coaching session that begins with "
-            f"this message. Return only the title, no quotes or punctuation:\n\n{first_message[:500]}"
-        )
-        response = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=30.0,
-        )
-        title = response.text.strip()[:100]
-        logger.info("[Langfuse] trace: generate_session_title completed -> %r", title)
-        return title
+        title = ""
+        async for attempt in AsyncRetrying(**_GEMINI_RETRY):
+            with attempt:
+                title = await gemini_generate(prompt, timeout=get_settings().gemini_title_timeout)
+        result = title.strip()[:100]
+        logger.info("[Langfuse] trace: generate_session_title completed -> %r", result)
+        return result
     except Exception as exc:
         logger.warning("[Langfuse] trace: generate_session_title failed (%s: %s), using fallback", type(exc).__name__, exc)
-        # Fallback: use first few words of the message
         words = first_message.split()
         return " ".join(words[:6])[:100] if words else "New Session"
 
@@ -137,36 +258,62 @@ async def generate_session_title(first_message: str) -> str:
 @observe(name="generate_session_summary")
 async def generate_session_summary(messages: list[dict]) -> str:
     """Produce a 1-2 sentence summary of a session for storage and future RAG context."""
-    init_vertexai()
+    history_text = "\n".join(
+        f"{m['role'].upper()}: {m['content'][:300]}"
+        for m in messages[-get_settings().gemini_summary_context_limit:]
+    )
+    prompt = (
+        "Summarize this wellness coaching conversation in 1-2 concise sentences. "
+        "Focus on the main topic discussed and any key insight or breakthrough. "
+        "Return only the summary, no preamble:\n\n" + history_text
+    )
     try:
-        model = GenerativeModel(get_settings().gemini_flash_model)
-        history_text = "\n".join(
-            f"{m['role'].upper()}: {m['content'][:300]}"
-            for m in messages[-20:]
-        )
-        prompt = (
-            "Summarize this wellness coaching conversation in 1-2 concise sentences. "
-            "Focus on the main topic discussed and any key insight or breakthrough. "
-            "Return only the summary, no preamble:\n\n" + history_text
-        )
-        response = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=20.0,
-        )
-        return response.text.strip()[:500]
+        summary = ""
+        async for attempt in AsyncRetrying(**_GEMINI_RETRY):
+            with attempt:
+                summary = await gemini_generate(prompt, timeout=get_settings().gemini_summary_timeout)
+        return summary.strip()[:500]
     except Exception as exc:
         logger.warning("generate_session_summary failed (%s)", type(exc).__name__)
         return ""
 
 
 @observe(name="generate_analytics")
-async def generate_analytics(conversation_snippets: list[str]) -> dict:
+async def generate_analytics(conversation_snippets: list[str], language: str = "en") -> dict:
     init_vertexai()
     logger.info("[Langfuse] trace: generate_analytics started (snippets=%d)", len(conversation_snippets))
     model = GenerativeModel(get_settings().gemini_pro_model)
-    content = "\n---\n".join(conversation_snippets[:50])
+    # The caller already applies .limit(settings.analytics_snippet_limit) to
+    # the DB query, so conversation_snippets is already capped.  Do NOT add a
+    # second hardcoded slice here — it would silently override the config value.
+    content = "\n---\n".join(conversation_snippets)
 
-    prompt = f"""You are ClariMetis, a systems-thinking intelligence engine performing a deep diagnostic on a user's psychological operating system based on their coaching session messages.
+    # Language-specific response instruction injected at the top of the prompt.
+    # JSON keys must stay in English for Pydantic parsing; only human-readable
+    # text values should be in the user's language.
+    _LANGUAGE_NAMES: dict[str, str] = {
+        "en": "English",
+        "es": "Spanish (Español)",
+        "pt": "Portuguese (Português)",
+        "fr": "French (Français)",
+        "it": "Italian (Italiano)",
+        "zh-TW": "Traditional Chinese (繁體中文)",
+        "ja": "Japanese (日本語)",
+        "ko": "Korean (한국어)",
+    }
+    language_name = _LANGUAGE_NAMES.get(language, "English")
+    language_instruction = (
+        ""
+        if language == "en"
+        else (
+            f"LANGUAGE INSTRUCTION: Write ALL human-readable text values in {language_name}. "
+            "This includes: observation, title, description, why, reason, action, evidence, "
+            "suggested_action, fix_type, focus_areas items, and the 'reason' field in priority_stack. "
+            "JSON keys must remain exactly as shown in English.\n\n"
+        )
+    )
+
+    prompt = f"""{language_instruction}You are ClariMetis, a systems-thinking intelligence engine performing a deep diagnostic on a user's psychological operating system based on their coaching session messages.
 
 User messages (most recent first):
 {content}
@@ -178,7 +325,11 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no code 
   "anxiety_score": <integer 0-100 OR null if data_reliability is 'insufficient'. Score based on: worry language, catastrophising, avoidance, physical stress signals. 0 = no anxiety.>,
   "self_esteem_score": <integer 0-100 OR null if data_reliability is 'insufficient'. Score based on: self-worth language, how user describes themselves, internal vs external validation seeking. 50 = neutral.>,
   "stress_load": <integer 0-100 OR null if data_reliability is 'insufficient'. Overall cognitive/emotional load.>,
-  "cognitive_noise": "<low|moderate|high>" OR null if data_reliability is 'insufficient'>,
+  "ego_score": <integer 0-100 OR null if data_reliability is 'insufficient'. Score based on: identity stability, defensiveness, grandiosity vs humility, reaction to criticism. 50 = neutral. High (70+) = rigid/defensive/grandiose; Low (30-) = identity-fluid, secure, ego-humble.>,
+  "emotion_control_score": <integer 0-100 OR null if data_reliability is 'insufficient'. Score based on: emotional regulation language, impulse control, reactivity vs composure. High (70+) = excellent regulation, calm under pressure; Low (30-) = emotionally reactive, easily overwhelmed.>,
+  "self_awareness_score": <integer 0-100 OR null if data_reliability is 'insufficient'. Score based on: metacognitive language ("I notice I tend to...", "I realise that..."), ability to name emotions accurately, recognition of own patterns and triggers, openness to feedback. High (70+) = strong self-insight; Low (30-) = blind spots, externalising, pattern repetition without awareness.>,
+  "motivation_score": <integer 0-100 OR null if data_reliability is 'insufficient'. Score based on: goal-setting language, intrinsic drive indicators ("I want to", "I'm excited about"), action-taking vs stagnation, sense of purpose and progress. High (70+) = driven, energised, purposeful; Low (30-) = stuck, unmotivated, passive.>,
+  "cognitive_noise": "<low|moderate|high> or null if data_reliability is 'insufficient'",
   "logic_loops": [
     {{
       "topic": "<recurring theme, e.g. 'Scarcity/Dating' or 'Career Stagnation'>",
@@ -231,15 +382,21 @@ Strict rules:
 - confidence_score: high = "I can", "I decided", "I did"; low = "I can't", "I don't know how", "I'm afraid to"
 - anxiety_score: high = "what if", "I'm worried", "I can't stop thinking"; low = calm, accepting language
 - self_esteem_score: high = internal validation, self-acceptance; low = "I'm not good enough", seeking approval
+- ego_score: high (bad) = defensiveness, "I'm always right", inability to accept criticism, grandiosity; low (good) = openness, humility, secure identity not dependent on being right
+- emotion_control_score: high (good) = composure, "I chose to respond calmly", reflecting before reacting; low (bad) = "I snapped", "I couldn't help it", emotional outbursts, rumination
+- self_awareness_score: high (good) = "I notice I...", recognising own patterns, naming emotions precisely, welcoming feedback; low (bad) = blaming externals, repeating patterns without recognition, difficulty naming feelings
+- motivation_score: high (good) = clear goals, "I want to", "I decided to start", forward momentum; low (bad) = "I don't know what I want", persistent stagnation, passive language, loss of purpose
 - priority_stack: Regulation ranks above Growth when stress_load > 70
 - Aim for 3-5 insights, 3-5 recommendations, 2-4 priority items
 - Tone: direct, diagnostic, systems-aware — not therapeutic or clinical"""
 
     try:
-        response = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=60.0,
-        )
+        async for attempt in AsyncRetrying(**_GEMINI_RETRY):
+            with attempt:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(model.generate_content, prompt),
+                    timeout=get_settings().gemini_analytics_timeout,
+                )
         raw = strip_markdown_json(response.text.strip())
         data = json.loads(raw)
         # Ensure all fields have defaults if model omitted them
@@ -247,6 +404,10 @@ Strict rules:
         data.setdefault("confidence_score", None)
         data.setdefault("anxiety_score", None)
         data.setdefault("self_esteem_score", None)
+        data.setdefault("ego_score", None)
+        data.setdefault("emotion_control_score", None)
+        data.setdefault("self_awareness_score", None)
+        data.setdefault("motivation_score", None)
         data.setdefault("stress_load", None)
         data.setdefault("cognitive_noise", None)
         data.setdefault("logic_loops", [])
@@ -254,6 +415,12 @@ Strict rules:
         if "primary_loop" in data and data["primary_loop"] and not data["logic_loops"]:
             data["logic_loops"] = [data["primary_loop"]]
         data.pop("primary_loop", None)
+        # These three are required fields in AnalyticsSummary. The model
+        # occasionally omits them when data_reliability is low — guard here so
+        # Pydantic serialisation never raises ValidationError.
+        data.setdefault("insights", [])
+        data.setdefault("recommendations", [])
+        data.setdefault("focus_areas", [])
         data.setdefault("relational_observations", [])
         data.setdefault("social_gratitude_index", None)
         data.setdefault("priority_stack", [])
@@ -265,6 +432,8 @@ Strict rules:
             "insights": [], "recommendations": [], "focus_areas": [],
             "data_reliability": "insufficient",
             "confidence_score": None, "anxiety_score": None, "self_esteem_score": None,
+            "ego_score": None, "emotion_control_score": None,
+            "self_awareness_score": None, "motivation_score": None,
             "stress_load": None, "cognitive_noise": None, "logic_loops": [],
             "relational_observations": [], "social_gratitude_index": None, "priority_stack": [],
         }

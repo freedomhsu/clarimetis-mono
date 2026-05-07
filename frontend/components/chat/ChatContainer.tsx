@@ -9,6 +9,12 @@ import { ChatWindow } from "./ChatWindow";
 import { api, type Session } from "@/lib/api";
 import { useDashboard } from "@/components/providers/DashboardContext";
 
+// The set of session IDs that have been opened at least once in this mount.
+// We keep their ChatWindow instances alive (hidden) so that in-flight streams
+// and loading state are preserved when the user switches to another session
+// and then switches back.
+type MountedSessions = Set<string>;
+
 interface Props {
   initialSessionId?: string;
 }
@@ -22,13 +28,32 @@ export function ChatContainer({ initialSessionId }: Props) {
     initialSessionId ?? null
   );
   const [actionError, setActionError] = useState<string | null>(null);
+  // Tracks every session ID whose ChatWindow has been mounted at least once.
+  // Kept as state so that adding a new session triggers a render.
+  const [mountedSessions, setMountedSessions] = useState<MountedSessions>(
+    () => new Set(initialSessionId ? [initialSessionId] : [])
+  );
+  // Tracks which sessions currently have an in-flight AI response so the
+  // sidebar can show a spinner even when the session window is hidden.
+  const [loadingSessions, setLoadingSessions] = useState<Set<string>>(
+    () => new Set()
+  );
 
   // Keep a ref so loadSessions can read the current activeSessionId without
   // being re-created every time it changes.
   const activeSessionIdRef = useRef(activeSessionId);
+  // Tracks a pending retry timeout so it can be cancelled on unmount.
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
+
+  // Cancel any pending retry on unmount.
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current !== null) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
 
   const loadSessions = useCallback(async (retryOnNotFound = true) => {
     const token = await getToken();
@@ -50,7 +75,7 @@ export function ChatContainer({ initialSessionId }: Props) {
     } catch (err) {
       if (err instanceof Error && err.message.startsWith("404")) {
         if (retryOnNotFound) {
-          setTimeout(() => loadSessions(false), 800);
+          retryTimeoutRef.current = setTimeout(() => loadSessions(false), 800);
         }
         return;
       }
@@ -71,6 +96,11 @@ export function ChatContainer({ initialSessionId }: Props) {
       const session = await api.createSession(token);
       setSessions((prev) => [session, ...prev]);
       setActiveSessionId(session.id);
+      setMountedSessions((prev) => {
+        const next = new Set(prev);
+        next.add(session.id);
+        return next;
+      });
       router.push(`/chat/${session.id}`);
     } catch {
       setActionError("Failed to create session. Please try again.");
@@ -79,6 +109,12 @@ export function ChatContainer({ initialSessionId }: Props) {
 
   const handleSelect = (sessionId: string) => {
     setActiveSessionId(sessionId);
+    setMountedSessions((prev) => {
+      if (prev.has(sessionId)) return prev;
+      const next = new Set(prev);
+      next.add(sessionId);
+      return next;
+    });
     router.push(`/chat/${sessionId}`);
   };
 
@@ -94,6 +130,11 @@ export function ChatContainer({ initialSessionId }: Props) {
       return;
     }
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    setMountedSessions((prev) => {
+      const next = new Set(prev);
+      next.delete(sessionId);
+      return next;
+    });
     if (activeSessionId === sessionId) {
       const remaining = sessions.filter((s) => s.id !== sessionId);
       const next = remaining[0]?.id ?? null;
@@ -118,6 +159,7 @@ export function ChatContainer({ initialSessionId }: Props) {
       <SessionList
         sessions={sessions}
         activeSessionId={activeSessionId}
+        loadingSessions={loadingSessions}
         onSelect={handleSelect}
         onCreate={handleCreate}
         onDelete={handleDelete}
@@ -131,20 +173,37 @@ export function ChatContainer({ initialSessionId }: Props) {
             {actionError}
           </div>
         )}
-        {activeSessionId ? (
-          <ChatWindow
-            sessionId={activeSessionId}
-            sessionTitle={sessions.find((s) => s.id === activeSessionId)?.title}
-            tier={tier}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 bg-zinc-50 dark:bg-[#0a0a0a]">
-            <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950 border border-teal-200/50 dark:border-teal-800/30 flex items-center justify-center">
-              <MessageCircle size={24} className="text-teal-700 dark:text-teal-400" />
+        {/* Render a ChatWindow for every session that has been opened.
+            Hidden windows stay mounted so their useChat hook (and any
+            in-flight streaming state) survives session switching. */}
+        {Array.from(mountedSessions).map((sid) => (
+          <div key={sid} className={sid === activeSessionId ? "h-full" : "hidden"}>
+            <ChatWindow
+              sessionId={sid}
+              sessionTitle={sessions.find((s) => s.id === sid)?.title}
+              tier={tier}
+              onLoadingChange={(loading) =>
+                setLoadingSessions((prev) => {
+                  if (loading === prev.has(sid)) return prev;
+                  const next = new Set(prev);
+                  loading ? next.add(sid) : next.delete(sid);
+                  return next;
+                })
+              }
+            />
+          </div>
+        ))}
+        {!activeSessionId && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 bg-slate-50 dark:bg-[#080810]">
+            <div className="relative w-14 h-14 mx-auto">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 blur-xl" />
+              <div className="relative w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-[#1a1a2e] border border-indigo-200/50 dark:border-indigo-700/40 flex items-center justify-center">
+                <MessageCircle size={22} className="text-indigo-600 dark:text-indigo-400" />
+              </div>
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">No session selected</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">Pick a session from the list or start a new one.</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">No session selected</p>
+              <p className="text-xs text-slate-400 dark:text-slate-600 mt-1">Pick a session from the list or start a new one.</p>
             </div>
           </div>
         )}

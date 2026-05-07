@@ -184,4 +184,53 @@ describe("useVoice — stopRecording / transcription", () => {
 
     expect(result.current.state).toBe("idle");
   });
+
+  it("surfaces the backend error message when it has no HTTP status prefix", async () => {
+    // The API layer throws new Error(detail) for plain-string FastAPI detail fields.
+    // useVoice must pass that message through rather than replacing it with a generic fallback.
+    mockApi.transcribeAudio.mockRejectedValue(
+      new Error("Recording was too short or silent -- please try again.")
+    );
+    const { result } = renderHook(() => useVoice(vi.fn()));
+
+    await act(async () => { await result.current.startRecording(); });
+    await act(async () => {
+      result.current.stopRecording();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(result.current.error).toBe(
+      "Recording was too short or silent -- please try again."
+    );
+  });
+
+  it("uses a generic fallback when the error message starts with a 3-digit status code", async () => {
+    // Errors surfaced as raw HTTP status strings should not leak to the user.
+    mockApi.transcribeAudio.mockRejectedValue(new Error("413: Request Entity Too Large"));
+    const { result } = renderHook(() => useVoice(vi.fn()));
+
+    await act(async () => { await result.current.startRecording(); });
+    await act(async () => {
+      result.current.stopRecording();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(result.current.error).toMatch(/transcription failed/i);
+    expect(result.current.error).not.toContain("413");
+  });
+
+  it("shows processing state while transcription is in-flight", async () => {
+    // Never resolve so the processing state persists for the assertion
+    mockApi.transcribeAudio.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useVoice(vi.fn()));
+
+    await act(async () => { await result.current.startRecording(); });
+    // stopRecording is synchronous; handleStop sets isProcessing=true before its first await
+    act(() => { result.current.stopRecording(); });
+
+    // Allow state to flush
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    expect(result.current.state).toBe("processing");
+  });
 });

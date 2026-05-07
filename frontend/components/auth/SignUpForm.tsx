@@ -191,6 +191,8 @@ export function SignUpForm() {
           required
         />
 
+        <div id="clerk-captcha" />
+
         <button
           type="submit"
           disabled={loading}

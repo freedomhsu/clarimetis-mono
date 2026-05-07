@@ -3,11 +3,22 @@
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, Settings, ChevronDown } from "lucide-react";
+import { LogOut, Settings, ChevronDown, Globe } from "lucide-react";
+import { useI18n } from "@/components/providers/I18nContext";
+
+const LANGUAGE_FLAGS: Record<string, string> = {
+  en:    "🇺🇸",
+  es:    "🇪🇸",
+  pt:    "🇧🇷",
+  fr:    "🇫🇷",  it:    "🇮🇹",  "zh-TW": "�",
+  ja:    "🇯🇵",
+  ko:    "🇰🇷",
+};
 
 export function SidebarUserMenu() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { lang, t } = useI18n();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -55,19 +66,29 @@ export function SidebarUserMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        {/* Avatar */}
-        {user.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.imageUrl}
-            alt={displayName}
-            className="w-8 h-8 rounded-full object-cover shrink-0"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">
-            {initials}
-          </div>
-        )}
+        {/* Avatar with language flag badge */}
+        <div className="relative shrink-0">
+          {user.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.imageUrl}
+              alt={displayName}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
+              {initials}
+            </div>
+          )}
+          {lang !== "en" && (
+            <span
+              className="absolute -bottom-1 -right-1 text-[10px] leading-none"
+              aria-label={`Language: ${lang}`}
+            >
+              {LANGUAGE_FLAGS[lang] ?? "🌐"}
+            </span>
+          )}
+        </div>
 
         {/* Name / email */}
         <div className="flex-1 min-w-0 text-left">
@@ -102,13 +123,23 @@ export function SidebarUserMenu() {
           {/* Menu items */}
           <div className="py-1">
             <Link
+              href="/account#language"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+            >
+              <Globe size={15} className="text-gray-500" />
+              <span className="flex-1">{t("menu_language")}</span>
+              <span className="text-base leading-none">{LANGUAGE_FLAGS[lang] ?? "🌐"}</span>
+            </Link>
+            <Link
               href="/account"
               role="menuitem"
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
             >
               <Settings size={15} className="text-gray-500" />
-              Account settings
+              {t("menu_account")}
             </Link>
             <button
               type="button"
@@ -117,7 +148,7 @@ export function SidebarUserMenu() {
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-red-400 transition-colors"
             >
               <LogOut size={15} className="text-gray-500" />
-              Sign out
+              {t("menu_signout")}
             </button>
           </div>
         </div>

@@ -13,12 +13,10 @@ import json
 import logging
 import uuid
 
-from vertexai.generative_models import GenerativeModel
-
 from app.config import get_settings
 from app.database import AsyncSessionLocal
 from app.models.evaluation_score import EvaluationScore
-from app.services.gcp_credentials import init_vertexai
+from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
 
 logger = logging.getLogger(__name__)
@@ -77,20 +75,13 @@ async def evaluate_exchange(
     """
     settings = get_settings()
 
-    init_vertexai()
     try:
-        model = GenerativeModel(get_settings().gemini_flash_model)
         prompt = (
             f"{_EVAL_PROMPT}\n\n"
             f"User message:\n{user_message[:1000]}\n\n"
             f"AI coach response:\n{assistant_response[:2000]}"
         )
-
-        raw_result = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=15.0,
-        )
-        raw = strip_markdown_json(raw_result.text.strip())
+        raw = strip_markdown_json(await gemini_generate(prompt, timeout=15.0))
         scores = json.loads(raw)
 
         # Primary sink: Cloud SQL

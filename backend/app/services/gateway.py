@@ -12,14 +12,9 @@ Specialist modes:
   wellness_coach      – General wellbeing, stress, mindfulness (default)
 """
 
-import asyncio
 import json
 
-import vertexai
-from vertexai.generative_models import GenerativeModel
-
-from app.config import get_settings
-from app.services.gcp_credentials import init_vertexai
+from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
 
 # ── Intent taxonomy ────────────────────────────────────────────────────────────
@@ -58,7 +53,7 @@ Respond with ONLY a JSON object — no markdown, no extra text:
 _BASE_RULES = """
 Non-negotiable rules:
 - Never diagnose or provide clinical mental health treatment.
-- If a user appears to be in crisis, immediately direct them to the 988 Suicide & Crisis Lifeline (call/text 988, US).
+- If a user appears to be in crisis, immediately direct them to the appropriate crisis line (see CRISIS RESOURCE below). If no language-specific line was provided, use: 988 Suicide & Crisis Lifeline (call/text 988, US).
 - Always be clear you are an AI life coach, not a licensed therapist.
 - NEVER give generic advice or copy-paste action items. Every response must be grounded in what THIS specific person has told you.
 - NEVER assume what someone means. A short or vague message carries multiple possible meanings — reflect back 2-3 distinctly different interpretations and ask which one resonates. Only narrow in once the person confirms.
@@ -66,6 +61,16 @@ Non-negotiable rules:
 - When the user shares images or video, acknowledge and incorporate the content.
 - Speak like a trusted friend who has a sharp mind — direct, warm, curious. Not clinical. Not scripted.
 - Always respond in the same language the user is writing in. If they switch languages mid-conversation, switch with them immediately."""
+
+# Localized crisis hotlines — used when a user has set a non-English language.
+_CRISIS_HOTLINES: dict[str, str] = {
+    "en":    "988 Suicide & Crisis Lifeline (call/text 988, US). International: findahelpline.com",
+    "es":    "Teléfono de la Esperanza (717 003 717, España) · SAPTEL (55 5259-8121, México). Internacional: findahelpline.com",
+    "pt":    "CVV – Centro de Valorização da Vida (188, Brasil) · SOS Voz Amiga (213 544 545, Portugal). Internacional: findahelpline.com",
+    "fr":    "Numéro National Prévention Suicide (3114, France) · Tel-Jeunes (1-800-263-2266, Canada). International : findahelpline.com",    "it":    "Telefono Amico (02 2327 2327, Italia) · Telefono Azzurro (19696, minori). Internazionale: findahelpline.com",    "zh-TW": "自殺防治專線 (1925，台灣) · 北京心理危機研究與干預中心 (010-82951332，中國大陸). 國際資源: findahelpline.com",
+    "ja":    "よりそいホットライン (0120-279-338，日本). 国際: findahelpline.com",
+    "ko":    "자살예방상담전화 (1393，한국). 국제: findahelpline.com",
+}
 
 SYSTEM_PROMPTS: dict[str, str] = {
     INTENT_WELLNESS_COACH: f"""You are ClariMetis — a deeply perceptive wellness and life coaching companion.
@@ -122,16 +127,9 @@ async def classify_intent(message: str) -> str:
     Returns one of the INTENT_* constants. Defaults to INTENT_WELLNESS_COACH
     on any classification error so the chat never breaks.
     """
-    init_vertexai()
-    model = GenerativeModel(get_settings().gemini_flash_model)
     prompt = f"{_CLASSIFIER_PROMPT}\n\nUser message: {message[:1000]}"
-
     try:
-        response = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=10.0,
-        )
-        raw = strip_markdown_json(response.text.strip())
+        raw = strip_markdown_json(await gemini_generate(prompt, timeout=10.0))
         data = json.loads(raw)
         intent = data.get("intent", INTENT_WELLNESS_COACH)
         return intent if intent in _VALID_INTENTS else INTENT_WELLNESS_COACH
@@ -139,6 +137,14 @@ async def classify_intent(message: str) -> str:
         return INTENT_WELLNESS_COACH
 
 
-def get_system_prompt(intent: str) -> str:
-    """Return the specialist system prompt for the given intent."""
-    return SYSTEM_PROMPTS.get(intent, SYSTEM_PROMPTS[INTENT_WELLNESS_COACH])
+def get_system_prompt(intent: str, language: str = "en") -> str:
+    """Return the specialist system prompt for the given intent.
+
+    Appends a language-specific crisis hotline override for non-English users
+    so the model cites the right emergency number.
+    """
+    base = SYSTEM_PROMPTS.get(intent, SYSTEM_PROMPTS[INTENT_WELLNESS_COACH])
+    if language != "en":
+        hotline = _CRISIS_HOTLINES.get(language, _CRISIS_HOTLINES["en"])
+        base += f"\n\nCRISIS RESOURCE: {hotline}. Always use this crisis line instead of 988 when directing this user to emergency support."
+    return base

@@ -1,3 +1,4 @@
+import json
 import logging
 import pathlib
 from contextlib import asynccontextmanager
@@ -5,27 +6,44 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
-from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import engine
+from app.rate_limit import limiter
 from app.routers import analytics, chat, media, sessions, stripe_webhooks, users, voice
+from sqlalchemy import text
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s:     %(name)s - %(message)s",
-)
+class _JsonFormatter(logging.Formatter):
+    """Formats log records as single-line JSON compatible with Cloud Logging severity."""
+
+    _SEVERITY = {
+        "DEBUG": "DEBUG",
+        "INFO": "INFO",
+        "WARNING": "WARNING",
+        "ERROR": "ERROR",
+        "CRITICAL": "CRITICAL",
+    }
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict = {
+            "severity": self._SEVERITY.get(record.levelname, record.levelname),
+            "message": record.getMessage(),
+            "logger": record.name,
+        }
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False)
+
+
+_json_handler = logging.StreamHandler()
+_json_handler.setFormatter(_JsonFormatter())
+logging.root.setLevel(logging.INFO)
+logging.root.handlers = [_json_handler]
 
 logger = logging.getLogger(__name__)
-
-# ── Rate limiter ──────────────────────────────────────────────────────────────
-# Limits are per-IP for unauthenticated endpoints and per-IP for all others.
-# Individual routers can tighten limits further with @limiter.limit("…").
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 
 async def _run_migrations() -> None:
@@ -56,7 +74,7 @@ async def _run_migrations() -> None:
                 async with engine.begin() as conn:
                     # Fail fast if a DDL lock cannot be acquired (e.g. during a
                     # rolling deploy where the previous revision holds table locks).
-                    await conn.execute(text("SET lock_timeout = '5s'"))
+                    await conn.execute(text(f"SET lock_timeout = '{get_settings().db_lock_timeout_seconds}s'"))
                     await conn.execute(text(stmt))
             except Exception as exc:
                 logger.warning(

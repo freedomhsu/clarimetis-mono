@@ -25,6 +25,10 @@ class ScoreSnapshot(Base):
     self_esteem_score: Mapped[int | None] = mapped_column(Integer)
     stress_load: Mapped[int | None] = mapped_column(Integer)
     social_gratitude_index: Mapped[int | None] = mapped_column(Integer)
+    ego_score: Mapped[int | None] = mapped_column(Integer)
+    emotion_control_score: Mapped[int | None] = mapped_column(Integer)
+    self_awareness_score: Mapped[int | None] = mapped_column(Integer)
+    motivation_score: Mapped[int | None] = mapped_column(Integer)
     data_reliability: Mapped[str] = mapped_column(String(20), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True

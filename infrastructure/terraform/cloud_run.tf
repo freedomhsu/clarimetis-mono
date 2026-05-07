@@ -202,3 +202,30 @@ resource "google_cloud_run_v2_service" "frontend" {
 #   role     = "roles/run.invoker"
 #   member   = "allUsers"
 # }
+
+# ── Custom domain mapping (no load balancer required) ─────────────────────────
+# Maps var.custom_domain → the frontend Cloud Run service.
+# Google auto-provisions and renews the TLS certificate.
+#
+# Prerequisites (run once before applying):
+#   gcloud domains verify <domain> --project=<project_id>
+#
+# After apply, Terraform outputs the DNS records to add to your registrar.
+# Use a CNAME record pointing staging.clarimetis.com → ghs.googlehosted.com.
+#
+# Leave custom_domain="" in tfvars to skip this resource entirely.
+resource "google_cloud_run_domain_mapping" "frontend" {
+  count    = var.custom_domain != "" ? 1 : 0
+  location = var.region
+  name     = var.custom_domain
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.frontend.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.frontend]
+}

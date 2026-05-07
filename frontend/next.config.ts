@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@clerk/nextjs", "@clerk/clerk-react", "@clerk/shared"],
   experimental: {
     // Allow large file uploads through the /api/proxy route.
-    // Cloud Run's own limit is 32 MB; keep ours just under that.
+    // Must match backend max_upload_bytes (app/config.py).  Cloud Run's own
+    // hard cap is 32 MB, so values above ~30 MB are silently truncated.
     serverBodySizeLimit: "30mb",
   },
   images: {

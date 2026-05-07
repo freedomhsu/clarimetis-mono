@@ -1,0 +1,144 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: clarimetis-staging
+  REGION: us-central1
+  REGISTRY: us-central1-docker.pkg.dev/clarimetis-staging/clarimetis/
+
+jobs:
+  # ── Detect which services changed ──────────────────────────────────────────
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend:  ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/deploy-staging.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/deploy-staging.yml'
+
+  # ── Build & deploy backend ──────────────────────────────────────────────────
+  deploy-backend:
+    name: Backend → Staging Cloud Run
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+
+    # Requires a "staging" GitHub Actions environment with these secrets:
+    #   WIF_PROVIDER              — Workload Identity Federation provider resource name
+    #   WIF_SERVICE_ACCOUNT       — GitHub Actions SA email in the staging GCP project
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authorize Docker push to Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.REGISTRY }}backend:${{ github.sha }}
+            ${{ env.REGISTRY }}backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          gcloud run services update clarimetis-backend \
+            --image="${{ env.REGISTRY }}backend:${{ github.sha }}" \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.PROJECT_ID }}" \
+            --quiet
+
+  # ── Build & deploy frontend ─────────────────────────────────────────────────
+  deploy-frontend:
+    name: Frontend → Staging Cloud Run
+    runs-on: ubuntu-latest
+    needs: [changes, deploy-backend]
+    # Run even if backend was skipped (only backend changes trigger deploy-backend).
+    if: |
+      always() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authorize Docker push to Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.REGISTRY }}frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}frontend:latest
+          build-args: |
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+            NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+            NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
+            NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          gcloud run services update clarimetis-frontend \
+            --image="${{ env.REGISTRY }}frontend:${{ github.sha }}" \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.PROJECT_ID }}" \
+            --quiet

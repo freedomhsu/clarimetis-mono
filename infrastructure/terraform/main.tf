@@ -1,23 +1,38 @@
-# ── Prerequisites (run once before terraform init) ────────────────────────────
+# ── Prerequisites (run once per new environment) ──────────────────────────────
 #
-#   1. Create the GCS bucket for Terraform state:
-#        gcloud storage buckets create gs://clarimetis-tfstate-dev-01 \
-#          --project=clarimetis-dev-01 --location=us-central1 \
+#   1. Create the GCP project and set the billing account:
+#        gcloud projects create clarimetis-<env> --name="Clarimetis <Env>"
+#        gcloud beta billing projects link clarimetis-<env> \
+#          --billing-account=<BILLING_ACCOUNT_ID>
+#
+#   2. Create the GCS bucket for Terraform state (one per environment):
+#        gcloud storage buckets create gs://clarimetis-tfstate-<env> \
+#          --project=clarimetis-<env> --location=us-central1 \
 #          --uniform-bucket-level-access
 #
-#   2. Enable required APIs:
-#        gcloud services enable \
-#          run.googleapis.com \
-#          artifactregistry.googleapis.com \
-#          secretmanager.googleapis.com \
-#          iam.googleapis.com \
-#          iamcredentials.googleapis.com \
-#          cloudresourcemanager.googleapis.com \
-#          --project=clarimetis-dev-01
+#   3. Copy env/staging.tfvars.example → env/staging.tfvars and fill in values.
+#      (staging.tfvars is gitignored — never commit real secrets.)
 #
-#   3. Copy terraform.tfvars.example → terraform.tfvars and fill in values.
+#   4. Bootstrap APIs first (only needed on a brand-new project):
+#        terraform init -backend-config="bucket=clarimetis-tfstate-<env>"
+#        terraform apply -target=google_project_service.apis \
+#          -var-file=env/<env>.tfvars
 #
-#   4. terraform init && terraform apply
+#   5. Apply everything else:
+#        terraform apply -var-file=env/<env>.tfvars
+#
+#   Switching environments locally:
+#        terraform init -reconfigure \
+#          -backend-config="bucket=clarimetis-tfstate-staging"
+#        terraform apply -var-file=env/staging.tfvars
+#
+#   All required APIs (including speech.googleapis.com and
+#   texttospeech.googleapis.com) are declared in apis.tf — no manual
+#   `gcloud services enable` needed.
+#
+#   NOTE: The backend "gcs" block below points to the dev state bucket by
+#   default. Always pass -backend-config="bucket=clarimetis-tfstate-<env>"
+#   when running `terraform init` for staging or prod so state is isolated.
 
 terraform {
   required_version = ">= 1.7"

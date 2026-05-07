@@ -1,5 +1,6 @@
 "use client";
 
+import { Brain, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Message } from "@/lib/api";
 import { CrisisBanner } from "@/components/ui/CrisisBanner";
@@ -17,15 +18,22 @@ export function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-      <div className="max-w-[78%] space-y-1">
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-5 items-start`}>
+      {/* AI avatar */}
+      {!isUser && (
+        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mr-2.5 mt-0.5 shadow-md shadow-indigo-900/20">
+          <Brain size={13} className="text-white" />
+        </div>
+      )}
+
+      <div className="max-w-[72%] space-y-1">
         {message.crisis_flagged && !isUser && <CrisisBanner />}
 
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? "bg-gradient-to-b from-teal-600 to-teal-900 border border-teal-500/20 text-white rounded-br-sm"
-              : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.06] text-zinc-800 dark:text-zinc-100 rounded-bl-sm"
+              ? "bg-gradient-to-br from-indigo-500 to-violet-600 border border-indigo-400/20 text-white rounded-br-sm shadow-lg shadow-indigo-900/20"
+              : "bg-white dark:bg-[#13131f] border border-slate-200 dark:border-indigo-900/40 text-slate-800 dark:text-slate-100 rounded-bl-sm"
           }`}
         >
           {isUser ? (
@@ -33,15 +41,22 @@ export function MessageBubble({ message }: Props) {
           ) : (
             <ReactMarkdown
               className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 dark:prose-invert"
+              components={{
+                // Open all links in a new tab — prevents the AI response from
+                // navigating the user away from the chat, and applies the
+                // noopener noreferrer security attributes to prevent the opened
+                // page from accessing window.opener.
+                a: ({ href, children }) => (
+                  <a href={href} target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                ),
+              }}
             >
               {message.content}
             </ReactMarkdown>
           )}
         </div>
-
-        <p className={`text-[10px] text-zinc-400 dark:text-zinc-600 px-1 ${isUser ? "text-right" : "text-left"}`}>
-          {formatTime(message.created_at)}
-        </p>
 
         {message.media_urls && message.media_urls.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -51,12 +66,23 @@ export function MessageBubble({ message }: Props) {
                 key={i}
                 src={url}
                 alt="attachment"
-                className="max-h-40 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                className="max-h-40 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
               />
             ))}
           </div>
         )}
+
+        <p className={`text-[10px] text-slate-400 dark:text-slate-600 px-1 ${isUser ? "text-right" : "text-left"}`}>
+          {formatTime(message.created_at)}
+        </p>
       </div>
+
+      {/* User avatar */}
+      {isUser && (
+        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-600 dark:to-slate-800 flex items-center justify-center shrink-0 ml-2.5 mt-0.5">
+          <User size={13} className="text-white" />
+        </div>
+      )}
     </div>
   );
 }

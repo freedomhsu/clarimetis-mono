@@ -25,6 +25,45 @@ export interface Message {
   created_at: string;
 }
 
+// Named sub-types — exported so pages and tests can import specific shapes
+// without duplicating the inline Array<{...}> definitions.
+
+export interface LogicLoop {
+  topic: string;
+  frequency: number;
+  efficiency: number;
+  fix_type: string;
+}
+
+export interface WellnessInsight {
+  category: string;
+  observation: string;
+  trend: "improving" | "declining" | "stable" | null;
+}
+
+export interface Recommendation {
+  type: "book" | "practice" | "course" | "strategy";
+  title: string;
+  description: string;
+  why: string;
+}
+
+export interface RelationalObservation {
+  person: string;
+  quality: string;
+  evidence: string;
+  suggested_action: string;
+  relationship_score: number | null;
+}
+
+export interface PriorityItem {
+  rank: number;
+  category: string;
+  action: string;
+  reasoning: string;
+  urgency: "critical" | "high" | "medium" | "low";
+}
+
 export interface AnalyticsSummary {
   total_sessions: number;
   total_messages: number;
@@ -32,41 +71,19 @@ export interface AnalyticsSummary {
   confidence_score: number | null;
   anxiety_score: number | null;
   self_esteem_score: number | null;
+  ego_score: number | null;
+  emotion_control_score: number | null;
+  self_awareness_score: number | null;
+  motivation_score: number | null;
   stress_load: number | null;
   cognitive_noise: "low" | "moderate" | "high" | null;
-  logic_loops: Array<{
-    topic: string;
-    frequency: number;
-    efficiency: number;
-    fix_type: string;
-  }>;
-  insights: Array<{
-    category: string;
-    observation: string;
-    trend: string | null;
-  }>;
-  recommendations: Array<{
-    type: string;
-    title: string;
-    description: string;
-    why: string;
-  }>;
+  logic_loops: LogicLoop[];
+  insights: WellnessInsight[];
+  recommendations: Recommendation[];
   focus_areas: string[];
-  relational_observations: Array<{
-    person: string;
-    quality: string;
-    evidence: string;
-    suggested_action: string;
-    relationship_score: number | null;
-  }>;
+  relational_observations: RelationalObservation[];
   social_gratitude_index: number | null;
-  priority_stack: Array<{
-    rank: number;
-    category: string;
-    action: string;
-    reasoning: string;
-    urgency: "critical" | "high" | "medium" | "low";
-  }>;
+  priority_stack: PriorityItem[];
   generated_at: string;
 }
 
@@ -77,10 +94,23 @@ export interface ScorePoint {
   self_esteem: number | null;
   stress: number | null;
   social: number | null;
+  ego: number | null;
+  emotion_control: number | null;
+  self_awareness: number | null;
+  motivation: number | null;
 }
 
 export interface ScoreHistory {
   points: ScorePoint[];
+}
+
+export interface MediaFile {
+  blob_path: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string | null; // null when GCS metadata is unavailable
+  url: string;
 }
 
 export interface SubscriptionError {
@@ -90,11 +120,12 @@ export interface SubscriptionError {
   upgrade_path: string;
 }
 
-async function request<T>(
+/** Low-level fetch with auth + error parsing. Returns the raw `Response`. */
+async function rawRequest(
   path: string,
   token: string,
-  options: RequestInit = {}
-): Promise<T> {
+  options: RequestInit = {},
+): Promise<Response> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -113,10 +144,22 @@ async function request<T>(
       err.subscriptionError = body.detail as SubscriptionError;
       throw err;
     }
-    const text = body ? JSON.stringify(body) : res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Propagate plain-string FastAPI detail messages (e.g. 413 size limit,
+    // 422 silent audio) directly so the UI can show a useful message.
+    const detail = body?.detail;
+    if (typeof detail === "string") throw new Error(detail);
+    throw new Error(`${res.status}: ${body ? JSON.stringify(body) : res.statusText}`);
   }
-  return res.json() as Promise<T>;
+  return res;
+}
+
+/** Convenience wrapper — fetches and returns parsed JSON. */
+async function request<T>(
+  path: string,
+  token: string,
+  options: RequestInit = {},
+): Promise<T> {
+  return (await rawRequest(path, token, options)).json() as Promise<T>;
 }
 
 export const api = {
@@ -128,8 +171,19 @@ export const api = {
     });
   },
 
-  async getMe(token: string): Promise<{ id: string; subscription_tier: string; email: string; full_name: string | null }> {
+  async getMe(token: string): Promise<{ id: string; subscription_tier: string; email: string; full_name: string | null; storage_used_bytes: number; preferred_language: string }> {
     return request("/api/v1/users/me", token);
+  },
+
+  async getLanguage(token: string): Promise<{ preferred_language: string }> {
+    return request("/api/v1/users/language", token);
+  },
+
+  async setLanguage(token: string, language: string): Promise<{ preferred_language: string }> {
+    return request("/api/v1/users/language", token, {
+      method: "PATCH",
+      body: JSON.stringify({ language }),
+    });
   },
 
   /** Starts a Stripe Checkout session — redirect the user to the returned URL. */
@@ -166,20 +220,8 @@ export const api = {
     });
   },
 
-  async deleteSession(token: string, sessionId: string): Promise<void> {    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
-    const res = await fetch(`${baseUrl}/api/v1/sessions/${sessionId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      if ((res.status === 402 || res.status === 429) && body?.detail?.code) {
-        const err = new Error(body.detail.message) as Error & { subscriptionError: SubscriptionError };
-        err.subscriptionError = body.detail as SubscriptionError;
-        throw err;
-      }
-      throw new Error(`${res.status}: Failed to delete session`);
-    }
+  async deleteSession(token: string, sessionId: string): Promise<void> {
+    await rawRequest(`/api/v1/sessions/${sessionId}`, token, { method: "DELETE" });
   },
 
   // ── Messages ───────────────────────────────────────────────────
@@ -197,25 +239,11 @@ export const api = {
     mediaUrls?: string[],
     signal?: AbortSignal,
   ): Promise<ReadableStream<Uint8Array>> {
-    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
-    const res = await fetch(`${baseUrl}/api/v1/sessions/${sessionId}/messages`, {
+    const res = await rawRequest(`/api/v1/sessions/${sessionId}/messages`, token, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ content, media_urls: mediaUrls ?? null }),
       signal,
     });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      if ((res.status === 402 || res.status === 429) && body?.detail?.code) {
-        const err = new Error(body.detail.message) as Error & { subscriptionError: SubscriptionError };
-        err.subscriptionError = body.detail as SubscriptionError;
-        throw err;
-      }
-      throw new Error(`${res.status}: Failed to send message`);
-    }
     if (!res.body) throw new Error("No response body");
     return res.body;
   },
@@ -223,56 +251,50 @@ export const api = {
   // ── Media ──────────────────────────────────────────────────────
   async uploadMedia(
     token: string,
-    file: File
-  ): Promise<{ url: string; content_type: string }> {
+    file: File,
+  ): Promise<{ url: string; blob_path: string; content_type: string }> {
     const form = new FormData();
     form.append("file", file);
-    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
-    const res = await fetch(`${baseUrl}/api/v1/media/upload`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      if ((res.status === 402 || res.status === 429) && body?.detail?.code) {
-        const err = new Error(body.detail.message) as Error & { subscriptionError: SubscriptionError };
-        err.subscriptionError = body.detail as SubscriptionError;
-        throw err;
-      }
-      throw new Error(`${res.status}: Failed to upload media`);
-    }
-    return res.json();
+    return (await rawRequest(`/api/v1/media/upload`, token, { method: "POST", body: form })).json();
   },
 
   // ── Voice ──────────────────────────────────────────────────────
   async transcribeAudio(
     token: string,
-    audioBlob: Blob
+    audioBlob: Blob,
+    signal?: AbortSignal,
   ): Promise<{ transcript: string }> {
+    const ext = audioBlob.type.includes("mp4") ? "mp4" : "webm";
     const form = new FormData();
-    form.append("file", audioBlob, "recording.webm");
-    const baseUrl = typeof window === "undefined" ? (process.env.BACKEND_URL ?? "http://localhost:8000") : "/api/proxy";
-    const res = await fetch(`${baseUrl}/api/v1/voice/transcribe`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      if ((res.status === 402 || res.status === 429) && body?.detail?.code) {
-        const err = new Error(body.detail.message) as Error & { subscriptionError: SubscriptionError };
-        err.subscriptionError = body.detail as SubscriptionError;
-        throw err;
-      }
-      throw new Error(`${res.status}: Failed to transcribe audio`);
-    }
-    return res.json();
+    form.append("file", audioBlob, `recording.${ext}`);
+    return (await rawRequest(`/api/v1/voice/transcribe`, token, { method: "POST", body: form, signal })).json();
+  },
+
+  async voiceConversation(
+    token: string,
+    sessionId: string,
+    audioBlob: Blob,
+    signal?: AbortSignal,
+  ): Promise<{ user_transcript: string; assistant_text: string; audio_data: string; crisis_flagged: boolean }> {
+    const ext = audioBlob.type.includes("mp4") ? "mp4" : "webm";
+    const form = new FormData();
+    form.append("file", audioBlob, `recording.${ext}`);
+    return (await rawRequest(`/api/v1/voice/conversation/${sessionId}`, token, { method: "POST", body: form, signal })).json();
+  },
+
+  // ── Media library ──────────────────────────────────────────────
+  async listMedia(token: string): Promise<MediaFile[]> {
+    return request("/api/v1/media", token);
+  },
+
+  async deleteMedia(token: string, blobPath: string): Promise<void> {
+    await rawRequest(`/api/v1/media/${blobPath}`, token, { method: "DELETE" });
   },
 
   // ── Analytics ──────────────────────────────────────────────────
-  async getAnalytics(token: string): Promise<AnalyticsSummary> {
-    return request("/api/v1/analytics/summary", token);
+  async getAnalytics(token: string, force = false): Promise<AnalyticsSummary> {
+    const url = force ? "/api/v1/analytics/summary?force=true" : "/api/v1/analytics/summary";
+    return request(url, token);
   },
   async getScoreHistory(token: string): Promise<ScoreHistory> {
     return request("/api/v1/analytics/history", token);

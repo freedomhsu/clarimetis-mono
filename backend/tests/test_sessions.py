@@ -206,3 +206,87 @@ async def test_delete_session_returns_404_when_user_not_synced():
         _clear()
 
     assert resp.status_code == 404
+
+
+# ── rename_session ─────────────────────────────────────────────────────────
+
+async def test_rename_session_returns_200_with_updated_title():
+    """PATCH /{session_id} must update session.title and return the session."""
+    user = make_user()
+    session = make_session(user, title="Old Title")
+
+    user_result = MagicMock()
+    user_result.scalar_one_or_none.return_value = user
+
+    session_result = MagicMock()
+    session_result.scalar_one_or_none.return_value = session
+
+    db = AsyncMock()
+    db.execute.side_effect = [user_result, session_result]
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+
+    _override(db)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.patch(
+                f"/api/v1/sessions/{session.id}",
+                json={"title": "New Title"},
+            )
+    finally:
+        _clear()
+
+    assert resp.status_code == 200
+    # session.title was mutated in-place before commit
+    assert session.title == "New Title"
+    db.commit.assert_awaited_once()
+
+
+async def test_rename_session_returns_404_for_another_users_session():
+    """IDOR guard: renaming a session owned by a different user must return 404."""
+    user = make_user()
+    other_session_id = uuid.uuid4()
+
+    user_result = MagicMock()
+    user_result.scalar_one_or_none.return_value = user
+
+    # Ownership check (WHERE user_id = user.id AND id = other_session_id) returns nothing
+    session_result = MagicMock()
+    session_result.scalar_one_or_none.return_value = None
+
+    db = AsyncMock()
+    db.execute.side_effect = [user_result, session_result]
+
+    _override(db)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.patch(
+                f"/api/v1/sessions/{other_session_id}",
+                json={"title": "Hijacked Title"},
+            )
+    finally:
+        _clear()
+
+    assert resp.status_code == 404
+    db.commit.assert_not_awaited()
+
+
+async def test_rename_session_returns_404_when_user_not_synced():
+    """PATCH /{session_id} must return 404 when the clerk_user_id has no DB record."""
+    user_result = MagicMock()
+    user_result.scalar_one_or_none.return_value = None
+
+    db = AsyncMock()
+    db.execute.return_value = user_result
+
+    _override(db)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.patch(
+                f"/api/v1/sessions/{uuid.uuid4()}",
+                json={"title": "Some Title"},
+            )
+    finally:
+        _clear()
+
+    assert resp.status_code == 404

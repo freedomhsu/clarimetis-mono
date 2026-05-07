@@ -242,3 +242,95 @@ async def test_unhandled_event_type_returns_200():
 
     assert resp.status_code == 200
     assert resp.json() == {"received": True}
+
+
+# ── checkout.session.completed ─────────────────────────────────────────────
+
+def _checkout_obj(
+    *,
+    customer_id: str = "cus_test",
+    subscription_id: str = "sub_new",
+    mode: str = "subscription",
+    payment_status: str = "paid",
+) -> dict:
+    return {
+        "customer": customer_id,
+        "subscription": subscription_id,
+        "mode": mode,
+        "payment_status": payment_status,
+    }
+
+
+async def test_checkout_session_completed_sets_pro_and_subscription_id(mock_db_with_user):
+    """checkout.session.completed with mode=subscription and payment_status=paid
+    must immediately set tier='pro' and store the subscription ID."""
+    db, user = mock_db_with_user
+    event = _make_stripe_event("checkout.session.completed", _checkout_obj())
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            with patch("stripe.Webhook.construct_event", return_value=event):
+                resp = await client.post(
+                    "/api/v1/webhooks/stripe",
+                    content=b"payload",
+                    headers={"stripe-signature": "sig"},
+                )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    assert resp.json() == {"received": True}
+    assert user.subscription_tier == "pro"
+    assert user.stripe_subscription_id == "sub_new"
+    db.commit.assert_awaited_once()
+
+
+async def test_checkout_session_completed_non_subscription_mode_ignored(mock_db_with_user):
+    """checkout.session.completed with mode='payment' (one-time) must NOT upgrade the tier."""
+    db, user = mock_db_with_user
+    event = _make_stripe_event(
+        "checkout.session.completed",
+        _checkout_obj(mode="payment", payment_status="paid"),
+    )
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            with patch("stripe.Webhook.construct_event", return_value=event):
+                resp = await client.post(
+                    "/api/v1/webhooks/stripe",
+                    content=b"payload",
+                    headers={"stripe-signature": "sig"},
+                )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    # Non-subscription checkout must leave the tier unchanged
+    assert user.subscription_tier == "free"
+    db.commit.assert_not_awaited()
+
+
+# ── trialing status ────────────────────────────────────────────────────────
+
+async def test_subscription_created_trialing_sets_pro(mock_db_with_user):
+    """subscription.created with status='trialing' must set tier='pro' (trial = full access)."""
+    db, user = mock_db_with_user
+    event = _make_stripe_event("customer.subscription.created", _sub_obj(status="trialing"))
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            with patch("stripe.Webhook.construct_event", return_value=event):
+                resp = await client.post(
+                    "/api/v1/webhooks/stripe",
+                    content=b"payload",
+                    headers={"stripe-signature": "sig"},
+                )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    assert user.subscription_tier == "pro"
+    db.commit.assert_awaited_once()

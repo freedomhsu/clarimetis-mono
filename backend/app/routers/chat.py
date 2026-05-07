@@ -1,8 +1,9 @@
 import asyncio
 import uuid
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,7 @@ from app.database import AsyncSessionLocal, get_db
 from app.models.message import Message
 from app.models.session import ChatSession
 from app.models.user import User
+from app.rate_limit import limiter
 from app.schemas.chat import ChatRequest, MessageOut
 from app.middleware.subscription import check_message_quota, get_current_user
 from app.services.crisis_detection import detect_crisis
@@ -19,18 +21,29 @@ from app.services.embeddings import embed_text
 from app.services.gateway import classify_intent, get_system_prompt
 from app.services.guardrails import check_input, check_output
 from app.services.evaluation import evaluate_exchange
-from app.services.gemini import generate_session_summary, generate_session_title, stream_chat_response
+from app.services.gemini import stream_chat_response
 from app.services.profile import refresh_user_profile
 from app.services.rag import get_relevant_context, get_tier1_context, get_user_profile_context, store_message_embedding
 from app.services.sentiment import score_sentiment
+from app.services.session_ops import maybe_snapshot_scores, update_session_summary, update_session_title
 from app.services.storage import is_blob_path, sign_blob_path
 
 router = APIRouter(prefix="/sessions/{session_id}/messages", tags=["chat"])
 
 
-async def _get_session_for_user(
-    session_id: uuid.UUID, user: User, db: AsyncSession
+# ── Dependencies ───────────────────────────────────────────────────────────────
+
+async def _get_session(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> ChatSession:
+    """Resolve the requested session, enforcing ownership.
+
+    Declared as a FastAPI dependency so it participates in the DI graph:
+    it can be overridden in tests, composed into other dependencies, and
+    its sub-dependencies (get_db, get_current_user) are cached per-request.
+    """
     result = await db.execute(
         select(ChatSession).where(
             ChatSession.id == session_id,
@@ -41,6 +54,10 @@ async def _get_session_for_user(
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return session
+
+
+# Annotated alias — use ``session: SessionDep`` in route handlers.
+SessionDep = Annotated[ChatSession, Depends(_get_session)]
 
 
 async def _save_assistant_message(
@@ -57,6 +74,29 @@ async def _save_assistant_message(
         db.add(msg)
         await db.commit()
         await store_message_embedding(db, msg)
+
+
+async def _persist_user_message(
+    db: AsyncSession,
+    session_id: uuid.UUID,
+    body: ChatRequest,
+    *,
+    crisis_flagged: bool = False,
+    refresh: bool = False,
+) -> Message:
+    """Create, persist, and optionally refresh a user Message row."""
+    msg = Message(
+        session_id=session_id,
+        role="user",
+        content=body.content,
+        media_urls=body.media_urls,
+        crisis_flagged=crisis_flagged,
+    )
+    db.add(msg)
+    await db.commit()
+    if refresh:
+        await db.refresh(msg)
+    return msg
 
 
 async def _store_user_msg_embedding(message_id: uuid.UUID, content: str) -> None:
@@ -79,45 +119,13 @@ async def _score_and_store_sentiment(message_id: uuid.UUID, content: str) -> Non
             await db.commit()
 
 
-async def _update_session_title(session_id: uuid.UUID, first_message: str) -> None:
-    async with AsyncSessionLocal() as db:
-        title = await generate_session_title(first_message)
-        result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
-        session = result.scalar_one_or_none()
-        if session:
-            session.title = title
-            await db.commit()
-
-
-async def _update_session_summary(session_id: uuid.UUID) -> None:
-    """Regenerate and persist a session summary after each assistant reply (>= 4 messages)."""
-    async with AsyncSessionLocal() as db:
-        msgs_result = await db.execute(
-            select(Message)
-            .where(Message.session_id == session_id)
-            .order_by(Message.created_at)
-        )
-        msgs = list(msgs_result.scalars().all())
-        if len(msgs) < 4:
-            return
-        history = [{"role": m.role, "content": m.content} for m in msgs]
-        summary = await generate_session_summary(history)
-        if not summary:
-            return
-        session_result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
-        session = session_result.scalar_one_or_none()
-        if session:
-            session.summary = summary
-            await db.commit()
-
 
 @router.get("", response_model=list[MessageOut])
 async def get_messages(
-    session_id: uuid.UUID,
+    session: SessionDep,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[Message]:
-    session = await _get_session_for_user(session_id, user, db)
     msgs_result = await db.execute(
         select(Message)
         .where(Message.session_id == session.id)
@@ -138,16 +146,16 @@ async def get_messages(
 
 
 @router.post("")
+@limiter.limit("40/minute")
 async def send_message(
-    session_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
     body: ChatRequest,
     background_tasks: BackgroundTasks,
     settings: SettingsDep,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(check_message_quota),
 ) -> StreamingResponse:
-    session = await _get_session_for_user(session_id, user, db)
-
     # Run blocking pre-work before the stream so that:
     #   a) the user message is committed to DB before we return a response,
     #      ensuring subsequent requests' quota checks see the correct count; and
@@ -161,47 +169,37 @@ async def send_message(
     )
     profile_context = await get_user_profile_context(db, user.id)
     is_crisis = crisis_result.get("is_crisis", False)
-    system_prompt = get_system_prompt(intent)
+    system_prompt = get_system_prompt(intent, user.preferred_language)
 
     # Input guardrail: if the message is out of scope, return the redirect response
     # directly without calling the main LLM — but still persist the user message.
     if not guardrail_result["safe"] and guardrail_result.get("redirect"):
-        user_msg = Message(
-            session_id=session.id,
-            role="user",
-            content=body.content,
-            media_urls=body.media_urls,
-            crisis_flagged=False,
-        )
-        db.add(user_msg)
-        await db.commit()
+        user_msg_r = await _persist_user_message(db, session.id, body, refresh=True)
         redirect_text = guardrail_result["redirect"]
+        # Save the redirect as an assistant message so it persists across reloads.
+        # Schedule the same background tasks as the normal path so the user
+        # message gets an embedding, sentiment score, and a session title.
+        background_tasks.add_task(_save_assistant_message, session.id, redirect_text)
+        background_tasks.add_task(_store_user_msg_embedding, user_msg_r.id, body.content)
+        background_tasks.add_task(_score_and_store_sentiment, user_msg_r.id, body.content)
+        if session.title == "New Session":
+            background_tasks.add_task(update_session_title, session.id, body.content)
 
         async def _redirect_stream() -> AsyncGenerator[str, None]:
             yield redirect_text
-            background_tasks.add_task(
-                _save_assistant_message, session.id, redirect_text, False
-            )
 
         return StreamingResponse(_redirect_stream(), media_type="text/plain; charset=utf-8")
 
     # Persist the user message NOW — before the StreamingResponse is returned.
-    user_msg = Message(
-        session_id=session.id,
-        role="user",
-        content=body.content,
-        media_urls=body.media_urls,
-        crisis_flagged=is_crisis,
+    user_msg = await _persist_user_message(
+        db, session.id, body, crisis_flagged=is_crisis, refresh=True
     )
-    db.add(user_msg)
-    await db.commit()
-    await db.refresh(user_msg)
 
     background_tasks.add_task(_store_user_msg_embedding, user_msg.id, body.content)
     background_tasks.add_task(_score_and_store_sentiment, user_msg.id, body.content)
 
     if session.title == "New Session":
-        background_tasks.add_task(_update_session_title, session.id, body.content)
+        background_tasks.add_task(update_session_title, session.id, body.content)
 
     accumulated: list[str] = []
 
@@ -212,11 +210,21 @@ async def send_message(
         query_embedding = await embed_text(body.content)
         history_rows = await db.execute(
             select(Message)
-            .where(Message.session_id == session.id)
-            .order_by(Message.created_at)
-            .limit(40)
+            .where(
+                Message.session_id == session.id,
+                # Exclude the current user message — it was already committed
+                # above so it would appear in this query, causing the LLM to
+                # receive the same user turn twice (once in history, once as
+                # the send_message payload).
+                Message.id != user_msg.id,
+            )
+            .order_by(Message.created_at.desc())
+            .limit(settings.chat_history_limit)
         )
-        history = [{"role": m.role, "content": m.content} for m in history_rows.scalars().all()]
+        history = [
+            {"role": m.role, "content": m.content}
+            for m in reversed(list(history_rows.scalars().all()))
+        ]
         # Run DB queries sequentially — asyncpg does not allow concurrent
         # operations on the same connection/session.
         rag_context = await get_relevant_context(db, user.id, body.content, embedding=query_embedding)
@@ -231,6 +239,11 @@ async def send_message(
             accumulated.append(settings.crisis_banner_text)
             yield settings.crisis_banner_text
 
+        chat_model = (
+            settings.gemini_pro_model
+            if user.subscription_tier == "pro"
+            else settings.gemini_flash_model
+        )
         async for chunk in stream_chat_response(
             user_message=body.content,
             conversation_history=history,
@@ -239,17 +252,31 @@ async def send_message(
             media_urls=body.media_urls,
             system_prompt=system_prompt,
             profile_context=profile_context,
+            model_name=chat_model,
         ):
             accumulated.append(chunk)
             yield chunk
 
-        full_response = "".join(accumulated)
-        background_tasks.add_task(
-            _save_assistant_message, session.id, full_response, is_crisis
+    async def _on_stream_complete(response_text: str) -> None:
+        """Registered as a background task; runs after the StreamingResponse is done."""
+        await _save_assistant_message(session.id, response_text, is_crisis)
+        await asyncio.gather(
+            refresh_user_profile(user.id),
+            update_session_summary(session.id),
+            maybe_snapshot_scores(user.id),
         )
-        background_tasks.add_task(refresh_user_profile, user.id)
-        background_tasks.add_task(_update_session_summary, session.id)
+
+    async def _wrapped_generate() -> AsyncGenerator[str, None]:
+        async for chunk in generate():
+            yield chunk
+        # Register post-stream tasks only after the generator fully completes.
+        # Registering them here (not inside generate()) ensures they run even if
+        # the caller awaits the StreamingResponse to exhaustion, and avoids
+        # losing the assistant message on early client disconnects — because
+        # background_tasks are submitted to Starlette after the response finishes.
+        full_response = "".join(accumulated)
+        background_tasks.add_task(_on_stream_complete, full_response)
         background_tasks.add_task(check_output, full_response, str(session.id))
         background_tasks.add_task(evaluate_exchange, body.content, full_response, str(session.id))
 
-    return StreamingResponse(generate(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(_wrapped_generate(), media_type="text/plain; charset=utf-8")

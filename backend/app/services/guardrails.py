@@ -5,14 +5,10 @@ Input guardrail  : blocks or redirects requests outside the coaching scope.
 Output guardrail : runs as a background task to flag problematic AI responses for review.
 """
 
-import asyncio
 import json
 import logging
 
-from vertexai.generative_models import GenerativeModel
-
-from app.config import get_settings
-from app.services.gcp_credentials import init_vertexai
+from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
 
 logger = logging.getLogger(__name__)
@@ -32,8 +28,11 @@ Classify the user message into one of these categories:
    Redirect to a lawyer.
 4. "financial_advice" — asking for specific investment, tax, or financial planning guidance.
    Redirect to a financial advisor.
-5. "harm_to_others" — expressing clear intent to harm another person.
-   This must be blocked and flagged.
+5. "harm_to_others" — expressing a SPECIFIC, CREDIBLE, CURRENT intent to physically harm
+   another person (e.g. "I have a weapon and I'm going to hurt X tonight").
+   Figurative frustration such as "I could kill him", "I want to strangle my boss",
+   or "she makes me so angry" MUST be classified as "safe" — these are normal
+   emotional expressions, not threats.
 
 Respond with ONLY a JSON object — no markdown, no extra text:
 {
@@ -108,29 +107,43 @@ async def check_input(message: str) -> dict:
         }
     On any error, fails open (returns safe=True) so coaching is never silently blocked.
     """
-    init_vertexai()
     try:
-        model = GenerativeModel(get_settings().gemini_flash_model)
         prompt = f"{_INPUT_GUARDRAIL_PROMPT}\n\nUser message: {message[:2000]}"
-
-        response = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=8.0,
-        )
-        raw = strip_markdown_json(response.text.strip())
+        raw = strip_markdown_json(await gemini_generate(prompt, timeout=15.0))
         result = json.loads(raw)
 
         category = result.get("category", "safe")
+        confidence = float(result.get("confidence", 1.0))
+
         if category == "safe":
             return {"safe": True, "category": "safe", "redirect": None}
 
+        # Confidence thresholds — prevent false positives on ambiguous messages.
+        # harm_to_others requires very high confidence (figurative language is common);
+        # redirect categories (medical/legal/financial) use a lower threshold.
+        min_confidence = 0.90 if category == "harm_to_others" else 0.75
+        if confidence < min_confidence:
+            logger.info(
+                "guardrails.input: low-confidence classification ignored category=%s confidence=%.2f msg=%.80r",
+                category, confidence, message,
+            )
+            return {"safe": True, "category": "safe", "redirect": None}
+
         redirect = _REDIRECT_MESSAGES.get(category)
-        logger.info("guardrails.input: blocked category=%s confidence=%.2f", category, result.get("confidence", 0))
+        logger.info(
+            "guardrails.input: blocked category=%s confidence=%.2f msg=%.80r",
+            category, confidence, message,
+        )
         return {"safe": False, "category": category, "redirect": redirect}
 
     except Exception as exc:
-        # Fail open: don't block users when the guardrail itself errors
-        logger.warning("guardrails.input: classifier error — failing open: %s", exc)
+        # Fail open: don't block users when the guardrail itself errors.
+        # Log the type name explicitly — asyncio.TimeoutError.__str__() is "" so
+        # the message alone would be empty and the cause invisible in logs.
+        logger.warning(
+            "guardrails.input: classifier error — failing open: %s: %s",
+            type(exc).__name__, exc,
+        )
         return {"safe": True, "category": "safe", "redirect": None}
 
 
@@ -144,16 +157,9 @@ async def check_output(response: str, session_id: str, message_id: str | None = 
     Returns:
         {"safe": bool, "flags": list[str], "reason": str}
     """
-    init_vertexai()
     try:
-        model = GenerativeModel(get_settings().gemini_flash_model)
         prompt = f"{_OUTPUT_GUARDRAIL_PROMPT}\n\nAI response: {response[:4000]}"
-
-        result_raw = await asyncio.wait_for(
-            asyncio.to_thread(model.generate_content, prompt),
-            timeout=10.0,
-        )
-        raw = strip_markdown_json(result_raw.text.strip())
+        raw = strip_markdown_json(await gemini_generate(prompt, timeout=10.0))
         result = json.loads(raw)
 
         if not result.get("safe", True):
@@ -163,6 +169,13 @@ async def check_output(response: str, session_id: str, message_id: str | None = 
                 message_id,
                 result.get("flags"),
                 result.get("reason"),
+            )
+            from app.services.alerting import send_guardrail_alert
+            await send_guardrail_alert(
+                flags=result.get("flags", []),
+                reason=result.get("reason", ""),
+                session_id=session_id,
+                response_snippet=response,
             )
 
         return result
