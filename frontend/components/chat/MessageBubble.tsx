@@ -11,7 +11,19 @@ interface Props {
 
 function formatTime(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const now = new Date();
+  const isToday =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (isToday) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  const opts: Intl.DateTimeFormatOptions =
+    d.getFullYear() === now.getFullYear()
+      ? { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
+      : { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" };
+  return d.toLocaleString([], opts);
 }
 
 export function MessageBubble({ message }: Props) {
