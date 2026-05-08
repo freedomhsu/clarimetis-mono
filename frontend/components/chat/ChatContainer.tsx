@@ -104,7 +104,9 @@ export function ChatContainer({ initialSessionId }: Props) {
         next.add(session.id);
         return next;
       });
-      router.push(`/chat/${session.id}`);
+      // Use pushState instead of router.push so Next.js does NOT remount
+      // ChatContainer (which would destroy hidden ChatWindow streaming state).
+      window.history.pushState(null, '', `/chat/${session.id}`);
     } catch {
       setActionError("Failed to create session. Please try again.");
     } finally {
@@ -120,7 +122,9 @@ export function ChatContainer({ initialSessionId }: Props) {
       next.add(sessionId);
       return next;
     });
-    router.push(`/chat/${sessionId}`);
+    // Use pushState instead of router.push so Next.js does NOT remount
+    // ChatContainer (which would destroy hidden ChatWindow streaming state).
+    window.history.pushState(null, '', `/chat/${sessionId}`);
   };
 
   const handleDelete = async (sessionId: string) => {
