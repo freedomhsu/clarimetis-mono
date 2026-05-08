@@ -102,15 +102,17 @@ export function useChat(sessionId: string) {
         const decoder = new TextDecoder();
         let accumulated = "";
         let buffer = "";
+        let isCrisis = false;
         accumulatedRef.current = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
-          const result = parseStreamChunk(chunk, buffer, accumulated);
+          const result = parseStreamChunk(chunk, buffer, accumulated, isCrisis);
           accumulated = result.accumulated;
           buffer = result.buffer;
+          isCrisis = result.isCrisis;
           accumulatedRef.current = accumulated;
           // Only update UI when still on the same session; keep reading so the
           // backend finishes generating and saves the message via BackgroundTask.
@@ -127,7 +129,6 @@ export function useChat(sessionId: string) {
         // The backend saves the assistant message via BackgroundTask, so we
         // wait briefly before fetching to let that commit complete.
         if (sessionIdRef.current === capturedSessionId) {
-          const isCrisis = accumulated.includes("988lifeline.org");
           const assistantMsg: Message = {
             id: crypto.randomUUID(),
             session_id: capturedSessionId,

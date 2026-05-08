@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Loader2,
   Lock,
+  RotateCcw,
 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -310,9 +311,33 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingCh
           </div>
         )}
 
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
+        {messages.map((msg, idx) => {
+          const isLastAssistant =
+            !isLoading &&
+            msg.role === "assistant" &&
+            idx === messages.length - 1;
+          // Find the most recent user message before this assistant reply.
+          const prevUserMsg = isLastAssistant
+            ? [...messages].slice(0, idx).reverse().find((m) => m.role === "user")
+            : undefined;
+          return (
+            <div key={msg.id}>
+              <MessageBubble message={msg} />
+              {isLastAssistant && prevUserMsg && (
+                <div className="flex justify-start pl-10 -mt-3 mb-4">
+                  <button
+                    onClick={() => sendMessage(prevUserMsg.content, undefined, undefined)}
+                    className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-600 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                    title="Regenerate response"
+                  >
+                    <RotateCcw size={11} />
+                    Regenerate
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {isLoading && streamingContent && (
           <StreamingBubble content={streamingContent} />

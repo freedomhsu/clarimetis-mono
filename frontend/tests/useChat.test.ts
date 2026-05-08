@@ -306,14 +306,10 @@ describe("useChat — response persistence after stream", () => {
     expect(callCount).toBeLessThanOrEqual(1);
   });
 
-  it("sets crisis_flagged=true on the optimistic message when stream contains 988lifeline.org", async () => {
-    // The backend prepends crisis_banner_text to the stream for crisis messages.
-    // useChat detects this without a server round-trip.
-    const crisisStream =
-      "I want to make sure you're safe right now. " +
-      "If you're in crisis, please reach out to the **988 Suicide & Crisis Lifeline** " +
-      "by calling or texting **988** (US), or chat at https://988lifeline.org. " +
-      "I'm here with you.\n\nI hear you.";
+  it("sets crisis_flagged=true on the optimistic message when stream contains CRISIS sentinel", async () => {
+    // The backend yields \x00CRISIS\x00\n sentinel for crisis messages.
+    // useChat detects this via parseStreamChunk without a server round-trip.
+    const crisisStream = "\x00CRISIS\x00\nI hear you.";
     mockApi.sendMessage.mockResolvedValue(makeStream(crisisStream));
 
     const { result } = renderHook(() => useChat("sess1"));

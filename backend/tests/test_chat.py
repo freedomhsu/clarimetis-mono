@@ -506,7 +506,7 @@ async def test_send_message_no_content_and_no_media_returns_422():
 
 async def test_send_message_crisis_detected_prepends_banner_and_saves_crisis_flagged_message():
     """When detect_crisis returns is_crisis=True:
-      - settings.crisis_banner_text (which references '988') is prepended to the stream
+      - the stream contains the \x00CRISIS\x00 sentinel (frontend shows <CrisisBanner />)
       - the user message is committed to DB with crisis_flagged=True
     """
     user = make_user(subscription_tier="pro")
@@ -530,9 +530,8 @@ async def test_send_message_crisis_detected_prepends_banner_and_saves_crisis_fla
                     json={"content": "I want to end my life"},
                 )
         assert resp.status_code == 200
-        # The stream must open with the crisis banner text (settings default
-        # includes "988lifeline.org").
-        assert "988" in resp.text
+        # The stream must contain the CRISIS sentinel so the frontend shows <CrisisBanner />.
+        assert "\x00CRISIS\x00" in resp.text
         # The user message must be stored with the crisis flag set
         assert db.add.call_count == 1
         saved: Message = db.add.call_args[0][0]

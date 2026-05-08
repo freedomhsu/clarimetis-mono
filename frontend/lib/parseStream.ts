@@ -1,11 +1,12 @@
 /**
  * Pure streaming-parser for the chat endpoint SSE-like protocol.
  *
- * Chunks arrive as raw bytes from the server. The server multiplexes two
+ * Chunks arrive as raw bytes from the server. The server multiplexes three
  * types of data over a single stream:
  *
  *   - Real content: plain text
  *   - Status updates: `\x00STATUS\x00:<text>\n`
+ *   - Crisis flag:   `\x00CRISIS\x00\n`  (no body; signals crisis_flagged=true)
  *
  * The parser accumulates content across calls and extracts status lines,
  * returning them separately so the caller can update UI state.
@@ -20,6 +21,8 @@ export interface ParseResult {
   statusUpdates: string[];
   /** Whether any real content was added by this chunk. */
   contentChanged: boolean;
+  /** True if a \x00CRISIS\x00 sentinel was seen in this or any prior chunk. */
+  isCrisis: boolean;
 }
 
 /**
@@ -28,13 +31,25 @@ export interface ParseResult {
  * @param chunk   - The decoded text from the current read (may be partial).
  * @param buffer  - Leftover from the previous call (initially `""`).
  * @param accumulated - Content accumulated before this call (initially `""`).
+ * @param prevIsCrisis - Crisis flag accumulated before this call (initially `false`).
  */
 export function parseStreamChunk(
   chunk: string,
   buffer: string,
   accumulated: string,
+  prevIsCrisis = false,
 ): ParseResult {
-  let buf = buffer + chunk;
+  const CRISIS_SENTINEL = "\x00CRISIS\x00";
+  // Strip the crisis sentinel before any other processing so it is never
+  // treated as real content or left in the buffer.
+  let isCrisis = prevIsCrisis;
+  let raw = buffer + chunk;
+  if (raw.includes(CRISIS_SENTINEL + "\n")) {
+    isCrisis = true;
+    raw = raw.replaceAll(CRISIS_SENTINEL + "\n", "");
+  }
+
+  let buf = raw;
   let acc = accumulated;
   const statusUpdates: string[] = [];
   let contentChanged = false;
@@ -80,5 +95,5 @@ export function parseStreamChunk(
     }
   }
 
-  return { accumulated: acc, buffer: newBuffer, statusUpdates, contentChanged };
+  return { accumulated: acc, buffer: newBuffer, statusUpdates, contentChanged, isCrisis };
 }
