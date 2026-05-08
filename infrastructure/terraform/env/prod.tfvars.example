@@ -6,9 +6,9 @@ github_repo = "freedomhsu/clarimetis-mono"
 database_url = "postgresql+asyncpg://user:password@host:5432/wellness_db"
 
 # ── Clerk ─────────────────────────────────────────────────────────────────────
-clerk_secret_key      = "sk_live_..."
-clerk_jwt_issuer      = "https://your-clerk-domain.clerk.accounts.dev"
-clerk_publishable_key = "pk_live_..."
+clerk_secret_key     = "sk_live_..."
+clerk_jwt_issuer     = "https://your-clerk-domain.clerk.accounts.dev"
+clerk_webhook_secret = "whsec_..."
 
 # ── Stripe ────────────────────────────────────────────────────────────────────
 stripe_secret_key           = "sk_live_..."

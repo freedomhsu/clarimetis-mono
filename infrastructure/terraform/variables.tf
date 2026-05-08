@@ -64,13 +64,14 @@ variable "clerk_secret_key" {
   sensitive = true
 }
 
-variable "clerk_jwt_issuer" {
-  type = string
+variable "clerk_webhook_secret" {
+  description = "Signing secret for the Clerk user.deleted webhook endpoint"
+  type        = string
+  sensitive   = true
 }
 
-variable "clerk_publishable_key" {
-  description = "Clerk publishable key — baked into the frontend Docker image at build time"
-  type        = string
+variable "clerk_jwt_issuer" {
+  type = string
 }
 
 variable "stripe_secret_key" {

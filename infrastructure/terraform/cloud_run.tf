@@ -14,8 +14,6 @@ resource "google_cloud_run_v2_service" "backend" {
       max_instance_count = 10
     }
 
-    startup_cpu_boost = true
-
     volumes {
       name = "cloudsql"
       cloud_sql_instance {
@@ -48,6 +46,7 @@ resource "google_cloud_run_v2_service" "backend" {
         for_each = {
           DATABASE_URL                = "database-url"
           CLERK_SECRET_KEY            = "clerk-secret-key"
+          CLERK_WEBHOOK_SECRET        = "clerk-webhook-secret"
           CLERK_JWT_ISSUER            = "clerk-jwt-issuer"
           STRIPE_SECRET_KEY           = "stripe-secret-key"
           STRIPE_WEBHOOK_SECRET       = "stripe-webhook-secret"

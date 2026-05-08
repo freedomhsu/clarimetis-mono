@@ -20,9 +20,9 @@ db_password  = "<DB_PASSWORD>"
 # ── Clerk ─────────────────────────────────────────────────────────────────────
 # Create a separate "Staging" Clerk application — free tier covers this.
 # Use test/dev keys (pk_test_... / sk_test_...) — never prod keys in staging.
-clerk_secret_key      = "sk_test_..."
-clerk_jwt_issuer      = "https://<your-staging-clerk-domain>.clerk.accounts.dev"
-clerk_publishable_key = "pk_test_..."
+clerk_secret_key     = "sk_test_..."
+clerk_jwt_issuer     = "https://<your-staging-clerk-domain>.clerk.accounts.dev"
+clerk_webhook_secret = "whsec_..."
 
 # ── Stripe ────────────────────────────────────────────────────────────────────
 # Use Stripe test-mode keys — no real charges.
