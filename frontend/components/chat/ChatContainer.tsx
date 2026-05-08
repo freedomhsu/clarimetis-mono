@@ -38,6 +38,7 @@ export function ChatContainer({ initialSessionId }: Props) {
   const [loadingSessions, setLoadingSessions] = useState<Set<string>>(
     () => new Set()
   );
+  const [isCreating, setIsCreating] = useState(false);
 
   // Keep a ref so loadSessions can read the current activeSessionId without
   // being re-created every time it changes.
@@ -89,9 +90,11 @@ export function ChatContainer({ initialSessionId }: Props) {
   }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
     setActionError(null);
     const token = await getToken();
-    if (!token) return;
+    if (!token) { setIsCreating(false); return; }
     try {
       const session = await api.createSession(token);
       setSessions((prev) => [session, ...prev]);
@@ -104,6 +107,8 @@ export function ChatContainer({ initialSessionId }: Props) {
       router.push(`/chat/${session.id}`);
     } catch {
       setActionError("Failed to create session. Please try again.");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -165,6 +170,7 @@ export function ChatContainer({ initialSessionId }: Props) {
         onDelete={handleDelete}
         onRename={handleRename}
         tier={tier}
+        isCreating={isCreating}
       />
 
       <div className="flex-1 h-full overflow-hidden">
