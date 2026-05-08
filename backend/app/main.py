@@ -13,7 +13,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.config import get_settings
 from app.database import engine
 from app.rate_limit import limiter
-from app.routers import analytics, chat, media, sessions, stripe_webhooks, users, voice
+from app.routers import analytics, chat, clerk_webhooks, media, sessions, stripe_webhooks, users, voice
 from sqlalchemy import text
 
 class _JsonFormatter(logging.Formatter):
@@ -116,6 +116,7 @@ app.include_router(media.router, prefix="/api/v1")
 app.include_router(voice.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(stripe_webhooks.router, prefix="/api/v1")
+app.include_router(clerk_webhooks.router, prefix="/api/v1")
 
 
 @app.get("/health")

@@ -210,6 +210,47 @@ async def list_user_media(user_id: str) -> list[dict]:
     return items
 
 
+async def delete_all_user_media(user_id: str) -> int:
+    """Delete every GCS object under ``uploads/<user_id>/`` and return the
+    total bytes freed.
+
+    Called by the Clerk ``user.deleted`` webhook to purge media files when a
+    user deletes their account.  Errors on individual blobs are logged but
+    never re-raised so the webhook handler can still delete the DB row.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    client = _get_client()
+    bucket = client.bucket(get_settings().gcs_bucket_name)
+    prefix = f"uploads/{user_id}/"
+
+    blobs: list = await asyncio.to_thread(
+        lambda: list(bucket.list_blobs(prefix=prefix))
+    )
+
+    total_freed = 0
+
+    async def _delete_one(blob) -> int:
+        try:
+            size: int = blob.size or 0
+            await asyncio.to_thread(blob.delete)
+            return size
+        except Exception as exc:
+            logger.warning("Failed to delete GCS blob %s: %s", blob.name, exc)
+            return 0
+
+    results = await asyncio.gather(*[_delete_one(b) for b in blobs])
+    total_freed = sum(results)
+    logger.info(
+        "Purged %d GCS object(s) (%d bytes) for user %s",
+        len(blobs),
+        total_freed,
+        user_id,
+    )
+    return total_freed
+
+
 async def delete_media_blob(blob_path: str) -> int:
     """Delete a blob from GCS and return its size in bytes.
 
