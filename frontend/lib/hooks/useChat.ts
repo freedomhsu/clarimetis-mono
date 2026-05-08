@@ -215,5 +215,30 @@ export function useChat(sessionId: string) {
     [getToken, sessionId, loadMessages]
   );
 
-  return { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration };
+  /**
+   * Regenerate the last assistant response.
+   * Deletes both the stale user + assistant messages from the DB and the local
+   * state, then re-submits the same user content — producing a clean replacement.
+   */
+  const regenerate = useCallback(
+    async (assistantMsgId: string, prevUserMsgId: string, userContent: string) => {
+      const token = await getToken();
+      if (!token) return;
+      // Delete the two messages from the server (best-effort, non-fatal).
+      await Promise.allSettled([
+        api.deleteMessage(token, sessionId, assistantMsgId),
+        api.deleteMessage(token, sessionId, prevUserMsgId),
+      ]);
+      // Remove them from local state so the UI is blank before the new stream starts.
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== assistantMsgId && m.id !== prevUserMsgId),
+      );
+      // Re-submit — sendMessage will add the user message back optimistically
+      // and stream a fresh assistant response.
+      await sendMessage(userContent);
+    },
+    [getToken, sessionId, sendMessage],
+  );
+
+  return { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, regenerate, stopGeneration };
 }

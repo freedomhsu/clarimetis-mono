@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useChat } from "@/lib/hooks/useChat";
 import { useDashboard } from "@/components/providers/DashboardContext";
 import { api, type Message, type SubscriptionError } from "@/lib/api";
@@ -165,7 +165,8 @@ function UpgradeGate({
 
 export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingChange }: Props) {
   const { isLoaded: clerkLoaded } = useAuth();
-  const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, stopGeneration } =
+  const { user: clerkUser } = useUser();
+  const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, regenerate, stopGeneration } =
     useChat(sessionId);
   const [dismissedError, setDismissedError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -322,11 +323,11 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingCh
             : undefined;
           return (
             <div key={msg.id}>
-              <MessageBubble message={msg} />
+              <MessageBubble message={msg} userImageUrl={clerkUser?.imageUrl} />
               {isLastAssistant && prevUserMsg && (
                 <div className="flex justify-start pl-10 -mt-3 mb-4">
                   <button
-                    onClick={() => sendMessage(prevUserMsg.content, undefined, undefined)}
+                    onClick={() => regenerate(msg.id, prevUserMsg.id, prevUserMsg.content)}
                     className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-600 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
                     title="Regenerate response"
                   >

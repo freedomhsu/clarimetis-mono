@@ -1,12 +1,13 @@
 "use client";
 
-import { Brain, User } from "lucide-react";
+import { Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Message } from "@/lib/api";
 import { CrisisBanner } from "@/components/ui/CrisisBanner";
 
 interface Props {
   message: Message;
+  userImageUrl?: string;
 }
 
 function formatTime(iso: string) {
@@ -26,7 +27,7 @@ function formatTime(iso: string) {
   return d.toLocaleString([], opts);
 }
 
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, userImageUrl }: Props) {
   const isUser = message.role === "user";
 
   return (
@@ -91,8 +92,19 @@ export function MessageBubble({ message }: Props) {
 
       {/* User avatar */}
       {isUser && (
-        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-600 dark:to-slate-800 flex items-center justify-center shrink-0 ml-2.5 mt-0.5">
-          <User size={13} className="text-white" />
+        <div className="w-7 h-7 rounded-xl shrink-0 ml-2.5 mt-0.5 overflow-hidden">
+          {userImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={userImageUrl}
+              alt="You"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-600 dark:to-slate-800 flex items-center justify-center">
+              <span className="text-white text-[10px] font-bold select-none">U</span>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -120,6 +120,30 @@ async def _score_and_store_sentiment(message_id: uuid.UUID, content: str) -> Non
 
 
 
+@router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_message(
+    message_id: uuid.UUID,
+    session: SessionDep,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a single message that belongs to this session.
+
+    Used by the frontend Regenerate flow to remove the stale user + assistant
+    messages before re-submitting the same question.
+    """
+    result = await db.execute(
+        select(Message).where(
+            Message.id == message_id,
+            Message.session_id == session.id,
+        )
+    )
+    msg = result.scalar_one_or_none()
+    if msg is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+    await db.delete(msg)
+    await db.commit()
+
+
 @router.get("", response_model=list[MessageOut])
 async def get_messages(
     session: SessionDep,

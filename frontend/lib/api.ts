@@ -229,6 +229,10 @@ export const api = {
     return request(`/api/v1/sessions/${sessionId}/messages`, token);
   },
 
+  async deleteMessage(token: string, sessionId: string, messageId: string): Promise<void> {
+    await rawRequest(`/api/v1/sessions/${sessionId}/messages/${messageId}`, token, { method: "DELETE" });
+  },
+
   /**
    * Returns the raw ReadableStream so the caller can stream chunks incrementally.
    */
