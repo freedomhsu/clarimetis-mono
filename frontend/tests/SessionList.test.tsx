@@ -249,3 +249,53 @@ describe("SessionList — rename", () => {
     expect(screen.queryByDisplayValue("Title")).not.toBeInTheDocument();
   });
 });
+
+// ── cross-session loading indicator ────────────────────────────────────────
+
+describe("SessionList — cross-session loading indicator", () => {
+  it("shows 'AI thinking' for a non-active session that is in loadingSessions", () => {
+    const sessions = [
+      makeSession({ id: "s1", title: "Session A" }),
+      makeSession({ id: "s2", title: "Session B" }),
+    ];
+    renderList(
+      { activeSessionId: "s2", loadingSessions: new Set(["s1"]) },
+      sessions,
+    );
+    expect(screen.getByText(/AI thinking/i)).toBeInTheDocument();
+  });
+
+  it("does NOT show 'AI thinking' for the active session even if it is in loadingSessions", () => {
+    const sessions = [makeSession({ id: "s1", title: "Active" })];
+    renderList(
+      { activeSessionId: "s1", loadingSessions: new Set(["s1"]) },
+      sessions,
+    );
+    expect(screen.queryByText(/AI thinking/i)).not.toBeInTheDocument();
+  });
+
+  it("does NOT show 'AI thinking' when loadingSessions is empty", () => {
+    const sessions = [
+      makeSession({ id: "s1", title: "A" }),
+      makeSession({ id: "s2", title: "B" }),
+    ];
+    renderList(
+      { activeSessionId: "s2", loadingSessions: new Set() },
+      sessions,
+    );
+    expect(screen.queryByText(/AI thinking/i)).not.toBeInTheDocument();
+  });
+
+  it("shows 'AI thinking' for multiple non-active generating sessions", () => {
+    const sessions = [
+      makeSession({ id: "s1", title: "A" }),
+      makeSession({ id: "s2", title: "B" }),
+      makeSession({ id: "s3", title: "C (active)" }),
+    ];
+    renderList(
+      { activeSessionId: "s3", loadingSessions: new Set(["s1", "s2"]) },
+      sessions,
+    );
+    expect(screen.getAllByText(/AI thinking/i)).toHaveLength(2);
+  });
+});
