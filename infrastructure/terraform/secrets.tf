@@ -2,8 +2,8 @@ locals {
   secret_values = {
     database-url                = var.database_url
     clerk-secret-key            = var.clerk_secret_key
+    clerk-webhook-secret        = var.clerk_webhook_secret
     clerk-jwt-issuer            = var.clerk_jwt_issuer
-    clerk-publishable-key       = var.clerk_publishable_key
     stripe-secret-key           = var.stripe_secret_key
     stripe-webhook-secret       = var.stripe_webhook_secret
     stripe-pro-monthly-price-id = var.stripe_pro_monthly_price_id

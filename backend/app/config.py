@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     stripe_pro_monthly_price_id: str
     stripe_pro_annual_price_id: str
 
+    # Clerk webhooks — sign each endpoint in the Clerk dashboard and paste
+    # the signing secret here.  Leave empty to skip signature verification
+    # (only acceptable in local dev where the endpoint is not internet-exposed).
+    clerk_webhook_secret: str = ""
+
     # Langfuse (optional — leave empty to disable tracing)
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
