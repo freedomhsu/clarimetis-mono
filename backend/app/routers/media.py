@@ -182,6 +182,7 @@ async def _run_ocr_and_store_sidecar(
 
 @router.post("/upload", response_model=MediaUploadResponse)
 @limiter.limit("20/hour")
+@limiter.limit("30/day")
 async def upload_file(
     request: Request,
     background_tasks: BackgroundTasks,

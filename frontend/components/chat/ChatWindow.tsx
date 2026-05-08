@@ -90,7 +90,34 @@ function UpgradeGate({
   onDismiss: () => void;
 }) {
   const { subscribe, billingLoading, billingError } = useDashboard();
+  const isRateLimit = error.code === "rate_limit_exceeded";
   const isLimit = error.code === "daily_limit_reached";
+
+  // Rate-limit errors: just a dismissible notice, no upgrade prompt.
+  if (isRateLimit) {
+    return (
+      <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-4 pb-3">
+        <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3">
+          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Slow down a bit
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              {error.message}
+            </p>
+          </div>
+          <button
+            onClick={onDismiss}
+            className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-200 text-lg leading-none shrink-0"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-4 pb-3">

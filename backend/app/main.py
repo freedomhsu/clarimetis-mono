@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -98,7 +97,34 @@ app = FastAPI(title="Life Coach API", version="0.1.0", lifespan=lifespan)
 
 # Expose the limiter on app.state so @limiter.limit decorators can find it
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Return a structured 429 so the frontend can render an appropriate banner.
+
+    Daily limits → code="daily_limit_reached" (free-tier message + upgrade CTA).
+    Shorter windows (per-minute / per-hour) → code="rate_limit_exceeded" (slow
+    down message, no upgrade prompt).
+    """
+    detail_str = str(exc.detail).lower() if exc.detail else ""
+    is_daily = "day" in detail_str
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": {
+                "code": "daily_limit_reached" if is_daily else "rate_limit_exceeded",
+                "message": (
+                    "You've reached your daily limit. Upgrade to Pro for unlimited access."
+                    if is_daily
+                    else "You're sending too many requests. Please wait a moment and try again."
+                ),
+                "upgrade_path": "/pricing",
+            }
+        },
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
