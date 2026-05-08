@@ -236,8 +236,9 @@ async def send_message(
         yield "\x00STATUS\x00:Generating response...\n"
 
         if is_crisis:
-            accumulated.append(settings.crisis_banner_text)
-            yield settings.crisis_banner_text
+            # Signal crisis via a sentinel — the frontend shows <CrisisBanner />
+            # based on this, without duplicating the banner text in the message body.
+            yield "\x00CRISIS\x00\n"
 
         chat_model = (
             settings.gemini_pro_model

@@ -3,9 +3,9 @@ import { parseStreamChunk } from "@/lib/parseStream";
 
 // Helper: run multiple chunks sequentially through the parser
 function runChunks(chunks: string[]): ReturnType<typeof parseStreamChunk> {
-  let state = { accumulated: "", buffer: "", statusUpdates: [] as string[], contentChanged: false };
+  let state = { accumulated: "", buffer: "", statusUpdates: [] as string[], contentChanged: false, isCrisis: false };
   for (const chunk of chunks) {
-    state = parseStreamChunk(chunk, state.buffer, state.accumulated);
+    state = parseStreamChunk(chunk, state.buffer, state.accumulated, state.isCrisis);
   }
   return state;
 }
@@ -84,5 +84,37 @@ describe("parseStreamChunk", () => {
   it("trims whitespace from STATUS text", () => {
     const r = parseStreamChunk("\x00STATUS\x00:  spaced  \n", "", "");
     expect(r.statusUpdates).toEqual(["spaced"]);
+  });
+
+  // ── CRISIS sentinel ───────────────────────────────────────────────────────
+
+  it("sets isCrisis=true when CRISIS sentinel is present", () => {
+    const r = parseStreamChunk("\x00CRISIS\x00\n", "", "");
+    expect(r.isCrisis).toBe(true);
+    expect(r.accumulated).toBe("");
+  });
+
+  it("strips CRISIS sentinel from accumulated content", () => {
+    const r = parseStreamChunk("\x00CRISIS\x00\nHello", "", "");
+    expect(r.isCrisis).toBe(true);
+    expect(r.accumulated).toBe("Hello");
+  });
+
+  it("isCrisis=false when no CRISIS sentinel", () => {
+    const r = parseStreamChunk("Hello world", "", "");
+    expect(r.isCrisis).toBe(false);
+  });
+
+  it("preserves isCrisis=true from previous chunk via prevIsCrisis", () => {
+    const r = runChunks(["\x00CRISIS\x00\n", "follow-up content"]);
+    expect(r.isCrisis).toBe(true);
+    expect(r.accumulated).toBe("follow-up content");
+  });
+
+  it("handles CRISIS sentinel alongside STATUS sentinel in same chunk", () => {
+    const r = parseStreamChunk("\x00CRISIS\x00\n\x00STATUS\x00:Thinking…\nHello", "", "");
+    expect(r.isCrisis).toBe(true);
+    expect(r.statusUpdates).toEqual(["Thinking…"]);
+    expect(r.accumulated).toBe("Hello");
   });
 });
