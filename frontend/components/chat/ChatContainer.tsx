@@ -163,21 +163,31 @@ export function ChatContainer({ initialSessionId }: Props) {
     }
   };
 
+  // Mobile: return from an active chat to the session list.
+  const handleBack = () => {
+    setActiveSessionId(null);
+    router.push("/chat");
+  };
+
   return (
     <div className="flex h-full">
-      <SessionList
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        loadingSessions={loadingSessions}
-        onSelect={handleSelect}
-        onCreate={handleCreate}
-        onDelete={handleDelete}
-        onRename={handleRename}
-        tier={tier}
-        isCreating={isCreating}
-      />
+      {/* Session list: full-width on mobile when no session active; fixed sidebar on md+ */}
+      <div className={activeSessionId ? "hidden md:flex" : "flex w-full md:w-auto"}>
+        <SessionList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          loadingSessions={loadingSessions}
+          onSelect={handleSelect}
+          onCreate={handleCreate}
+          onDelete={handleDelete}
+          onRename={handleRename}
+          tier={tier}
+          isCreating={isCreating}
+        />
+      </div>
 
-      <div className="flex-1 h-full overflow-hidden">
+      {/* Chat area: hidden on mobile when no session selected */}
+      <div className={`flex-1 h-full overflow-hidden${!activeSessionId ? " hidden md:block" : ""}`}>
         {actionError && (
           <div className="px-4 py-2 bg-red-50 dark:bg-red-950/40 border-b border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
             {actionError}
@@ -192,6 +202,7 @@ export function ChatContainer({ initialSessionId }: Props) {
               sessionId={sid}
               sessionTitle={sessions.find((s) => s.id === sid)?.title}
               tier={tier}
+              onBack={handleBack}
               onLoadingChange={(loading) =>
                 setLoadingSessions((prev) => {
                   if (loading === prev.has(sid)) return prev;

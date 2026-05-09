@@ -14,6 +14,7 @@ import {
   Loader2,
   Lock,
   RotateCcw,
+  ChevronLeft,
 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -62,6 +63,8 @@ interface Props {
   sessionId: string;
   sessionTitle?: string;
   tier?: "free" | "pro";
+  /** Mobile: called when the user taps the back arrow to return to the session list. */
+  onBack?: () => void;
   /** Called whenever the loading/streaming state changes so the parent can
    * show a per-session indicator in the sidebar. */
   onLoadingChange?: (isLoading: boolean) => void;
@@ -190,7 +193,7 @@ function UpgradeGate({
   );
 }
 
-export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingChange }: Props) {
+export function ChatWindow({ sessionId, sessionTitle, tier = "free", onBack, onLoadingChange }: Props) {
   const { isLoaded: clerkLoaded } = useAuth();
   const { user: clerkUser } = useUser();
   const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, regenerate, stopGeneration } =
@@ -234,6 +237,17 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingCh
 
         {/* Main title row */}
         <div className="relative flex items-center gap-3 px-5 pt-4 pb-2.5">
+          {/* Mobile back button */}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:hidden flex items-center justify-center w-10 h-10 -ml-2 mr-1 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors touch-manipulation shrink-0"
+              aria-label="Back to sessions"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
           {/* Icon — larger with layered glow */}
           <div className="relative shrink-0">
             <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-br from-indigo-500/35 to-violet-600/35 blur-xl" />

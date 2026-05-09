@@ -82,7 +82,7 @@ export function SessionList({
   const cancelEdit = () => setEditingId(null);
 
   return (
-    <div className="w-64 shrink-0 border-r border-slate-200 dark:border-white/[0.05] bg-white dark:bg-[#0c0c18] flex flex-col h-full">
+    <div className="w-full md:w-64 md:shrink-0 border-r border-slate-200 dark:border-white/[0.05] bg-white dark:bg-[#0c0c18] flex flex-col h-full">
 
       {/* ── Header ── */}
       <div className="relative overflow-hidden px-4 pt-5 pb-4 space-y-3">

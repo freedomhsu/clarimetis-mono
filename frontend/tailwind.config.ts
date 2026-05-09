@@ -8,6 +8,9 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
+      screens: {
+        xs: "480px",
+      },
       colors: {
         brand: {
           50: "#f0f9ff",

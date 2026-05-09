@@ -59,7 +59,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
   };
 
   return (
-    <div className="bg-white dark:bg-[#0c0c18] border-t border-slate-200 dark:border-white/[0.05] px-4 pt-3 pb-3 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+    <div className="bg-white dark:bg-[#0c0c18] border-t border-slate-200 dark:border-white/[0.05] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
       {/* Pending media previews + upload spinner */}
       {(pendingMedia.length > 0 || isUploading) && (
         <div className="flex flex-wrap gap-2 mb-2 px-1">
@@ -157,7 +157,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
               type="button"
               onClick={onStop}
               aria-label="Stop generation"
-              className="flex items-center justify-center w-8 h-8 rounded-xl bg-red-500 hover:bg-red-600 text-white shadow-sm transition-all duration-150 scale-100 hover:scale-105"
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500 hover:bg-red-600 text-white shadow-sm transition-all duration-150 scale-100 hover:scale-105 touch-manipulation"
             >
               <Square size={13} fill="currentColor" strokeWidth={0} />
             </button>
@@ -167,7 +167,7 @@ export function MessageInput({ onSend, onStop, disabled, isStreaming, onSubscrip
               onClick={handleSend}
               disabled={!canSend}
               aria-label="Send message"
-              className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 ${
+              className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-150 touch-manipulation ${
                 canSend
                   ? "text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-violet-600 dark:hover:from-indigo-400 dark:hover:to-violet-500 border border-indigo-400/30 dark:border-indigo-400/20 shadow-md shadow-indigo-900/20 scale-100 hover:scale-105"
                   : "bg-slate-100 dark:bg-[#1a1a2e] text-slate-300 dark:text-slate-600 cursor-not-allowed"
