@@ -82,4 +82,4 @@ async def send_guardrail_alert(
 
     except Exception as exc:
         # Never let alerting errors bubble up and affect the request lifecycle
-        logger.error("alerting: failed to send guardrail alert: %s", exc)
+        logger.error("alerting: failed to send guardrail alert: %s", exc, exc_info=True)

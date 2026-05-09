@@ -226,7 +226,7 @@ async def upload_file(
             user_id=clerk_user_id,
         )
     except Exception as gcs_exc:
-        logger.error("upload_media: GCS upload failed for user %s: %s", clerk_user_id, gcs_exc)
+        logger.error("upload_media: GCS upload failed for user %s: %s", clerk_user_id, gcs_exc, exc_info=True)
         try:
             await db.execute(
                 sa_update(User)
@@ -239,7 +239,7 @@ async def upload_file(
             )
             await db.commit()
         except Exception as rollback_exc:
-            logger.error("upload_media: quota rollback failed for user %s: %s", clerk_user_id, rollback_exc)
+            logger.error("upload_media: quota rollback failed for user %s: %s", clerk_user_id, rollback_exc, exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Failed to store the file. Please try again.",
@@ -285,7 +285,7 @@ async def delete_file(
     try:
         size = await delete_media_blob(blob_path)
     except Exception as exc:
-        logger.error("delete_media_blob failed for %s: %s", blob_path, exc)
+        logger.error("delete_media_blob failed for %s: %s", blob_path, exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete file from storage.")
 
     # Atomic decrement — clamp to 0 to guard against counter drift.

@@ -1,5 +1,6 @@
 import asyncio
 import io
+import logging
 import uuid
 from datetime import timedelta
 from threading import Lock
@@ -11,6 +12,8 @@ from google.cloud import storage
 
 from app.config import get_settings
 from app.services.gcp_credentials import get_gcp_credentials
+
+logger = logging.getLogger(__name__)
 
 # ── GCS client singleton ──────────────────────────────────────────────────────
 
@@ -218,9 +221,6 @@ async def delete_all_user_media(user_id: str) -> int:
     user deletes their account.  Errors on individual blobs are logged but
     never re-raised so the webhook handler can still delete the DB row.
     """
-    import logging
-    logger = logging.getLogger(__name__)
-
     client = _get_client()
     bucket = client.bucket(get_settings().gcs_bucket_name)
     prefix = f"uploads/{user_id}/"
@@ -268,6 +268,7 @@ async def delete_media_blob(blob_path: str) -> int:
         await asyncio.to_thread(blob.delete)
     except Exception:
         # Blob not found or already deleted — treat as success.
+        logger.debug("delete_media_blob: blob %s not found or already deleted", blob_path)
         size = 0
 
     # Best-effort sidecar cleanup — never let this block the response.
@@ -275,7 +276,7 @@ async def delete_media_blob(blob_path: str) -> int:
     try:
         await asyncio.to_thread(sidecar.delete)
     except Exception:
-        pass
+        logger.debug("delete_media_blob: sidecar cleanup skipped for %s", blob_path + _SIDECAR_SUFFIX)
 
     return size
 
@@ -306,4 +307,5 @@ async def download_text_sidecar(blob_path: str) -> str | None:
         return data.decode("utf-8")
     except Exception:
         # NotFound or any other error — treat as "not available"
+        logger.debug("download_text_sidecar: not available for %s", blob_path)
         return None

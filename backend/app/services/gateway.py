@@ -13,9 +13,12 @@ Specialist modes:
 """
 
 import json
+import logging
 
 from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
+
+logger = logging.getLogger(__name__)
 
 # ── Intent taxonomy ────────────────────────────────────────────────────────────
 
@@ -134,6 +137,7 @@ async def classify_intent(message: str) -> str:
         intent = data.get("intent", INTENT_WELLNESS_COACH)
         return intent if intent in _VALID_INTENTS else INTENT_WELLNESS_COACH
     except Exception:
+        logger.warning("gateway: classify_intent failed, defaulting to wellness_coach", exc_info=True)
         return INTENT_WELLNESS_COACH
 
 

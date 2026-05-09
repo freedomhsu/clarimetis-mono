@@ -96,6 +96,6 @@ async def handle_stripe_webhook(
     except Exception as exc:
         # Log but always return 200 so Stripe does not retry — the event has been received.
         # Persistent failures should be investigated via logs / Stripe dashboard.
-        logger.error("stripe webhook: error processing event %s — %s", event_type, exc)
+        logger.error("stripe webhook: error processing event %s — %s", event_type, exc, exc_info=True)
 
     return {"received": True}

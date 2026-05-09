@@ -157,5 +157,5 @@ async def health() -> dict:
             await conn.execute(text("SELECT 1"))
         return {"status": "ok", "db": "ok"}
     except Exception as exc:
-        logger.error("Health check failed: %s", exc)
+        logger.error("Health check failed: %s", exc, exc_info=True)
         return JSONResponse(status_code=503, content={"status": "error", "db": "unreachable"})
