@@ -39,7 +39,8 @@ async def handle_stripe_webhook(
             # Immediately mark the user as Pro when checkout succeeds.
             # This fires before customer.subscription.created and avoids
             # the frontend polling window being too narrow.
-            if obj.get("mode") == "subscription" and obj.get("payment_status") == "paid":
+            # For trials, payment_status is "no_payment_required" (card is saved but not charged yet).
+            if obj.get("mode") == "subscription" and obj.get("payment_status") in ("paid", "no_payment_required"):
                 customer_id = obj.get("customer")
                 if customer_id:
                     result = await db.execute(

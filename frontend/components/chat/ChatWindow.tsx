@@ -155,12 +155,12 @@ function UpgradeGate({
           disabled={billingLoading !== null}
           className="flex items-center justify-between gap-2 px-4 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-60 transition-colors"
         >
-          <span>Pro Monthly</span>
+          <span>7-day Free Trial</span>
           <span className="flex items-center gap-1">
             {billingLoading === "monthly" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <span className="font-bold">$9.99/mo</span>
+              <span className="font-bold text-[11px] font-normal opacity-80">then $9.99/mo</span>
             )}
           </span>
         </button>

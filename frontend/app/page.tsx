@@ -81,8 +81,8 @@ const tiers = [
     name: "Pro Monthly",
     price: "$9.99",
     period: "/ mo",
-    description: "Unlimited access, cancel anytime.",
-    cta: "Start Pro",
+    description: "7 days free, then $9.99/mo — cancel anytime.",
+    cta: "Start Free Trial",
     href: "/sign-up",
     highlighted: true,
     items: [

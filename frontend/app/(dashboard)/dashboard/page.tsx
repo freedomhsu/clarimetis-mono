@@ -382,12 +382,12 @@ function DashboardContent() {
                       disabled={planLoading !== null}
                       className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white text-sm font-semibold disabled:opacity-60 transition-all shadow-md shadow-indigo-900/20 ring-1 ring-white/[0.10]"
                     >
-                      <span>Pro Monthly</span>
+                      <span>7-day Free Trial</span>
                       <span className="flex items-center gap-1">
                         {planLoading === "monthly" ? (
                           <Loader2 size={14} className="animate-spin" />
                         ) : (
-                          <span className="font-bold">$9.99/mo</span>
+                          <span className="font-bold text-[11px] font-normal opacity-80">then $9.99/mo</span>
                         )}
                       </span>
                     </button>
