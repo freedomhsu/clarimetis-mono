@@ -1,12 +1,27 @@
 import type { ScorePoint } from "@/lib/api";
 
 /**
- * Returns the last 30 score history points in chronological order.
- * No same-day deduplication — every snapshot is shown as an individual data
- * point so users can see all their sessions even when multiple fall on one day.
- * The x-axis label in the chart will include time when same-day duplicates exist.
+ * Deduplicate score history points to one entry per local calendar day.
+ * When multiple points share the same day, the last one (latest timestamp)
+ * wins — inputs must be in ascending chronological order.
+ * Returns at most the 30 most recent distinct days.
  */
 export function deduplicateScorePoints(points: ScorePoint[]): ScorePoint[] {
+  const dayMap = new Map<string, ScorePoint>();
+  for (const p of points) {
+    const d = new Date(p.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    dayMap.set(key, p);
+  }
+  return Array.from(dayMap.values()).slice(-30);
+}
+
+/**
+ * Returns the last 30 score history points in chronological order without
+ * any same-day deduplication — every snapshot is shown as an individual data
+ * point so users can see all their sessions even when multiple fall on one day.
+ */
+export function allScorePoints(points: ScorePoint[]): ScorePoint[] {
   return points.slice(-30);
 }
 

@@ -44,7 +44,7 @@ import {
   type ScorePoint,
   type SubscriptionError,
 } from "@/lib/api";
-import { deduplicateScorePoints, hasSameDayDuplicates } from "@/lib/analyticsUtils";
+import { allScorePoints, hasSameDayDuplicates } from "@/lib/analyticsUtils";
 import { useI18n } from "@/components/providers/I18nContext";
 
 // ── Lookup tables ─────────────────────────────────────────────────────────────
@@ -587,7 +587,7 @@ function ScoreHistoryChart({ history }: { history: ScoreHistory | null }) {
     : allChartLines.filter(l => l.group === activeGroup);
 
   const chartPoints: ScorePoint[] = history?.points.length
-    ? deduplicateScorePoints(history.points)
+    ? allScorePoints(history.points)
     : [];
 
   const hasData = chartPoints.length >= 2;
