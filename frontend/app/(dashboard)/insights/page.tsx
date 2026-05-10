@@ -44,7 +44,7 @@ import {
   type ScorePoint,
   type SubscriptionError,
 } from "@/lib/api";
-import { deduplicateScorePoints } from "@/lib/analyticsUtils";
+import { allScorePoints, hasSameDayDuplicates } from "@/lib/analyticsUtils";
 import { useI18n } from "@/components/providers/I18nContext";
 
 // ── Lookup tables ─────────────────────────────────────────────────────────────
@@ -564,38 +564,84 @@ export default function InsightsPage() {
 
 // ── Score history chart ───────────────────────────────────────────────────────
 
+type MetricGroup = "all" | "growth" | "wellbeing";
+
 function ScoreHistoryChart({ history }: { history: ScoreHistory | null }) {
   const { t } = useI18n();
-  // Chart line definitions — labels translated, keys/colours static.
-  const chartLines = [
-    { key: "confidence",      label: t("score_confidence"),      color: "#6366f1" },
-    { key: "stress",          label: t("score_stress"),          color: "#f97316" },
-    { key: "anxiety",         label: t("score_anxiety"),         color: "#ef4444" },
-    { key: "self_esteem",     label: t("score_self_esteem"),     color: "#10b981" },
-    { key: "ego",             label: t("score_ego"),             color: "#a855f7" },
-    { key: "emotion_control", label: t("score_emotion_control"), color: "#06b6d4" },
-    { key: "social",          label: t("score_social_health"),   color: "#f43f5e" },
-    { key: "self_awareness",  label: t("score_self_awareness"),  color: "#0ea5e9" },
-    { key: "motivation",      label: t("score_motivation"),      color: "#f59e0b" },
+  const [activeGroup, setActiveGroup] = useState<MetricGroup>("all");
+
+  const allChartLines = [
+    { key: "confidence",      label: t("score_confidence"),      color: "#6366f1", group: "growth"    },
+    { key: "self_esteem",     label: t("score_self_esteem"),     color: "#10b981", group: "growth"    },
+    { key: "self_awareness",  label: t("score_self_awareness"),  color: "#0ea5e9", group: "growth"    },
+    { key: "motivation",      label: t("score_motivation"),      color: "#f59e0b", group: "growth"    },
+    { key: "stress",          label: t("score_stress"),          color: "#f97316", group: "wellbeing" },
+    { key: "anxiety",         label: t("score_anxiety"),         color: "#ef4444", group: "wellbeing" },
+    { key: "emotion_control", label: t("score_emotion_control"), color: "#14b8a6", group: "wellbeing" },
+    { key: "ego",             label: t("score_ego"),             color: "#a855f7", group: "wellbeing" },
+    { key: "social",          label: t("score_social_health"),   color: "#ec4899", group: "wellbeing" },
   ] as const;
-  // Deduplicate to one point per LOCAL calendar day (latest entry wins).
-  // Must run in the browser — only the client knows the user's timezone.
+
+  const chartLines = activeGroup === "all"
+    ? allChartLines
+    : allChartLines.filter(l => l.group === activeGroup);
+
   const chartPoints: ScorePoint[] = history?.points.length
-    ? deduplicateScorePoints(history.points)
+    ? allScorePoints(history.points)
     : [];
 
   const hasData = chartPoints.length >= 2;
+  const withTime  = hasData && hasSameDayDuplicates(chartPoints);
+  const sparseDots = chartPoints.length <= 6;
+
+  const formatXTick = (d: string) => {
+    const date = new Date(d);
+    const dateStr = date.toLocaleDateString([], { month: "short", day: "numeric" });
+    if (withTime) {
+      return dateStr + " · " + date.toLocaleTimeString([], { hour: "numeric", hour12: true });
+    }
+    return dateStr;
+  };
+
+  const groups: { key: MetricGroup; label: string }[] = [
+    { key: "all",       label: "All" },
+    { key: "growth",    label: "Growth" },
+    { key: "wellbeing", label: "Wellbeing" },
+  ];
 
   return (
     <SectionCard>
-      <SectionHeader icon={TrendingUp} title={t("insights_score_trends")} className="mb-1" />
-      <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
-        {t("insights_trends_subtitle")}
-        {hasData && <span className="ml-1 text-slate-300 dark:text-slate-600">· {chartPoints.length} snapshots</span>}
-      </p>
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <SectionHeader icon={TrendingUp} title={t("insights_score_trends")} className="mb-1" />
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {t("insights_trends_subtitle")}
+            {hasData && (
+              <span className="ml-1 text-slate-300 dark:text-slate-600">· {chartPoints.length} snapshot{chartPoints.length !== 1 ? "s" : ""}</span>
+            )}
+          </p>
+        </div>
+        {hasData && (
+          <div className="flex gap-1 shrink-0 mt-0.5">
+            {groups.map(g => (
+              <button
+                key={g.key}
+                onClick={() => setActiveGroup(g.key)}
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                  activeGroup === g.key
+                    ? "bg-indigo-500 text-white shadow-sm"
+                    : "bg-slate-100 dark:bg-indigo-950/40 text-slate-500 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       {hasData ? (
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={chartPoints} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={chartPoints} margin={{ top: 8, right: 8, left: -24, bottom: withTime ? 16 : 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-100 dark:text-indigo-900/40" />
             <XAxis
               dataKey="date"
@@ -603,7 +649,10 @@ function ScoreHistoryChart({ history }: { history: ScoreHistory | null }) {
               className="text-gray-400"
               tickLine={false}
               axisLine={false}
-              tickFormatter={(d: string) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" })}
+              tickFormatter={formatXTick}
+              angle={withTime ? -25 : 0}
+              textAnchor={withTime ? "end" : "middle"}
+              height={withTime ? 44 : 20}
             />
             <YAxis
               domain={[0, 100]}
@@ -620,12 +669,20 @@ function ScoreHistoryChart({ history }: { history: ScoreHistory | null }) {
                 borderRadius: "0.75rem",
                 fontSize: "11px",
                 boxShadow: "0 4px 24px rgba(99,102,241,0.10)",
+                padding: "8px 12px",
               }}
-              itemStyle={{ padding: "1px 0" }}
-              labelFormatter={(d: string) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" })}
-              formatter={(value: number, name: string) => [value, name]}
+              itemStyle={{ padding: "2px 0" }}
+              labelFormatter={formatXTick}
+              formatter={(value: unknown, name: string) => [
+                typeof value === "number" ? value : "–",
+                name,
+              ]}
             />
-            <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
+            <Legend
+              iconType="circle"
+              iconSize={7}
+              wrapperStyle={{ fontSize: "11px", paddingTop: "14px" }}
+            />
             {chartLines.map(({ key, label, color }) => (
               <Line
                 key={key}
@@ -634,15 +691,16 @@ function ScoreHistoryChart({ history }: { history: ScoreHistory | null }) {
                 name={label}
                 stroke={color}
                 strokeWidth={2}
-                dot={{ r: 3, strokeWidth: 0, fill: color }}
-                activeDot={{ r: 5 }}
+                dot={{ r: sparseDots ? 5 : 3, strokeWidth: 0, fill: color }}
+                activeDot={{ r: sparseDots ? 7 : 5, strokeWidth: 2, stroke: "#fff" }}
                 connectNulls
               />
             ))}
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="flex items-center justify-center h-32 rounded-xl bg-slate-50 dark:bg-[#0c0c18] border border-slate-100 dark:border-indigo-900/30">
+        <div className="flex flex-col items-center justify-center h-36 gap-2 rounded-xl bg-slate-50 dark:bg-[#0c0c18] border border-slate-100 dark:border-indigo-900/30">
+          <Activity size={18} className="text-slate-300 dark:text-slate-600" aria-hidden="true" />
           <p className="text-xs text-slate-400 dark:text-slate-500 italic">
             {t("insights_trends_empty")}
           </p>

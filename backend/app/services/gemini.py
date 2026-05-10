@@ -382,7 +382,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no code 
 Strict rules:
 - Set individual scores to null when data_reliability is 'insufficient' — never fabricate scores
 - logic_loops: include ALL recurring themes you detect (can be 1-5); empty array [] if none found
-- relational_observations: only include when a real named/described person is mentioned; include relationship_score null if only 1-2 mentions
+- relational_observations: include ALL distinct people who are named or clearly described — no upper limit on count; include relationship_score null if only 1-2 mentions
 - confidence_score: high = "I can", "I decided", "I did"; low = "I can't", "I don't know how", "I'm afraid to"
 - anxiety_score: high = "what if", "I'm worried", "I can't stop thinking"; low = calm, accepting language
 - self_esteem_score: high = internal validation, self-acceptance; low = "I'm not good enough", seeking approval
