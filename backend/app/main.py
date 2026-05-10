@@ -11,6 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
 from app.database import engine
+from app.middleware.auth import _get_jwks
 from app.rate_limit import limiter
 from app.routers import analytics, chat, clerk_webhooks, media, sessions, stripe_webhooks, users, voice
 from sqlalchemy import text
@@ -90,6 +91,15 @@ async def _run_migrations() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await _run_migrations()
+    # Pre-warm the Clerk JWKS cache so the first user request on a fresh pod
+    # does not stall for 10+ seconds waiting for a cold JWKS fetch.  If Clerk
+    # is unreachable at startup we log a warning and continue — the cache will
+    # be populated on the first authenticated request instead.
+    try:
+        await _get_jwks()
+        logger.info("Clerk JWKS cache pre-warmed")
+    except Exception as exc:
+        logger.warning("Could not pre-warm Clerk JWKS cache: %s", exc, exc_info=True)
     yield
 
 
