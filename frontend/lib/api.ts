@@ -114,7 +114,7 @@ export interface MediaFile {
 }
 
 export interface SubscriptionError {
-  code: "subscription_required" | "daily_limit_reached";
+  code: "subscription_required" | "daily_limit_reached" | "rate_limit_exceeded";
   message: string;
   limit?: number;
   upgrade_path: string;

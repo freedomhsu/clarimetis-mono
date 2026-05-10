@@ -27,7 +27,7 @@ async def detect_crisis(content: str) -> dict:
         try:
             return json.loads(raw)
         except Exception as parse_exc:
-            logger.error("crisis_detection: failed to parse response — %s | raw=%r", parse_exc, raw[:200])
+            logger.error("crisis_detection: failed to parse response — %s | raw=%r", parse_exc, raw[:200], exc_info=True)
             # Fail safe: treat unparseable response as potential crisis.
             return {"is_crisis": True, "confidence": 0.0, "reason": "parse_error"}
     except Exception as exc:

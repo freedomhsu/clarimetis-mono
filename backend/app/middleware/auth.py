@@ -29,14 +29,20 @@ async def _get_jwks(*, force_refresh: bool = False) -> dict:
         cache_stale = (now - _jwks_fetched_at) >= get_settings().jwks_cache_ttl_seconds
         if _jwks_cache is not None and not force_refresh and not cache_stale:
             return _jwks_cache
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{get_settings().clerk_jwt_issuer}/.well-known/jwks.json",
-                timeout=get_settings().clerk_jwks_fetch_timeout,
-            )
-            resp.raise_for_status()
-            _jwks_cache = resp.json()
-            _jwks_fetched_at = time.monotonic()
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{get_settings().clerk_jwt_issuer}/.well-known/jwks.json",
+                    timeout=get_settings().clerk_jwks_fetch_timeout,
+                )
+                resp.raise_for_status()
+                _jwks_cache = resp.json()
+                _jwks_fetched_at = time.monotonic()
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Authentication service temporarily unavailable — please retry",
+            ) from exc
     return _jwks_cache
 
 
@@ -82,6 +88,9 @@ async def get_current_user_id(
             public_key,  # type: ignore[arg-type]
             algorithms=["RS256"],
             issuer=get_settings().clerk_jwt_issuer,
+            # 30s leeway absorbs JWKS fetch latency on cold pod starts and minor
+            # clock skew between the token issuer (Clerk) and this server.
+            leeway=30,
         )
         user_id: str | None = payload.get("sub")
         if not user_id:

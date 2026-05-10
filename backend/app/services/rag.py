@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 
 from sqlalchemy import select, text
@@ -8,6 +9,8 @@ from app.config import get_settings
 from app.models.message import Message
 from app.models.user_profile import UserProfile
 from app.services.embeddings import embed_text
+
+logger = logging.getLogger(__name__)
 
 
 async def get_relevant_context(
@@ -74,6 +77,7 @@ async def get_tier1_context(
         return [f"[{row.category}] {row.title}\n{row.content}" for row in rows]
     except Exception:
         # Table not yet created / seeded — rollback so the session stays usable
+        logger.warning("rag: get_tier1_context failed — continuing without context", exc_info=True)
         await db.rollback()
         return []
 

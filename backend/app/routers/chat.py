@@ -170,7 +170,8 @@ async def get_messages(
 
 
 @router.post("")
-@limiter.limit("40/minute")
+@limiter.limit("20/minute")
+@limiter.limit("200/day")
 async def send_message(
     request: Request,
     session: SessionDep,

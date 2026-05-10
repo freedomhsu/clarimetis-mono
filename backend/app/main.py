@@ -6,12 +6,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
 from app.database import engine
+from app.middleware.auth import _get_jwks
 from app.rate_limit import limiter
 from app.routers import analytics, chat, clerk_webhooks, media, sessions, stripe_webhooks, users, voice
 from sqlalchemy import text
@@ -91,6 +91,15 @@ async def _run_migrations() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await _run_migrations()
+    # Pre-warm the Clerk JWKS cache so the first user request on a fresh pod
+    # does not stall for 10+ seconds waiting for a cold JWKS fetch.  If Clerk
+    # is unreachable at startup we log a warning and continue — the cache will
+    # be populated on the first authenticated request instead.
+    try:
+        await _get_jwks()
+        logger.info("Clerk JWKS cache pre-warmed")
+    except Exception as exc:
+        logger.warning("Could not pre-warm Clerk JWKS cache: %s", exc, exc_info=True)
     yield
 
 
@@ -98,7 +107,34 @@ app = FastAPI(title="Life Coach API", version="0.1.0", lifespan=lifespan)
 
 # Expose the limiter on app.state so @limiter.limit decorators can find it
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Return a structured 429 so the frontend can render an appropriate banner.
+
+    Daily limits → code="daily_limit_reached" (free-tier message + upgrade CTA).
+    Shorter windows (per-minute / per-hour) → code="rate_limit_exceeded" (slow
+    down message, no upgrade prompt).
+    """
+    detail_str = str(exc.detail).lower() if exc.detail else ""
+    is_daily = "day" in detail_str
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": {
+                "code": "daily_limit_reached" if is_daily else "rate_limit_exceeded",
+                "message": (
+                    "You've reached your daily limit. Upgrade to Pro for unlimited access."
+                    if is_daily
+                    else "You're sending too many requests. Please wait a moment and try again."
+                ),
+                "upgrade_path": "/pricing",
+            }
+        },
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
@@ -131,5 +167,5 @@ async def health() -> dict:
             await conn.execute(text("SELECT 1"))
         return {"status": "ok", "db": "ok"}
     except Exception as exc:
-        logger.error("Health check failed: %s", exc)
+        logger.error("Health check failed: %s", exc, exc_info=True)
         return JSONResponse(status_code=503, content={"status": "error", "db": "unreachable"})

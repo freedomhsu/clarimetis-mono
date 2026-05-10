@@ -66,7 +66,7 @@ async def sync_user(
                 body.email, body.full_name
             )
         except Exception as exc:
-            logger.error("sync_user: failed to create Stripe customer for %s — %s", body.email, exc)
+            logger.error("sync_user: failed to create Stripe customer for %s — %s", body.email, exc, exc_info=True)
             stripe_customer_id = None
         user = User(
             clerk_user_id=clerk_user_id,
@@ -150,7 +150,7 @@ async def subscribe(
             user.stripe_customer_id = await stripe_service.create_customer(user.email, user.full_name)
             await db.commit()
         except Exception as exc:
-            logger.error("subscribe: Stripe customer creation failed for user %s — %s", user.id, exc)
+            logger.error("subscribe: Stripe customer creation failed for user %s — %s", user.id, exc, exc_info=True)
             raise HTTPException(status_code=503, detail="Billing setup failed. Please try again later.") from exc
 
     price_id = (

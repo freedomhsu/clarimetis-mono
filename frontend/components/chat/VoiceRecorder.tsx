@@ -24,7 +24,7 @@ export function VoiceRecorder({ onTranscript, disabled, onSubscriptionError }: P
           type="button"
           onClick={startRecording}
           disabled={disabled}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="p-2.5 rounded-lg text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all touch-manipulation"
           aria-label="Start voice recording"
         >
           <Mic size={17} />

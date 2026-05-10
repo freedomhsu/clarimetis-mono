@@ -142,6 +142,7 @@ async def _save_voice_messages(
 
 @router.post("/transcribe", response_model=VoiceTranscribeResponse)
 @limiter.limit("30/hour")
+@limiter.limit("60/day")
 async def transcribe_audio_endpoint(
     request: Request,
     audio: Annotated[_AudioPayload, Depends(_read_and_validate_audio)],
@@ -158,6 +159,7 @@ async def transcribe_audio_endpoint(
 
 @router.post("/conversation/{session_id}", response_model=VoiceConversationResponse)
 @limiter.limit("20/hour")
+@limiter.limit("40/day")
 async def voice_conversation(
     request: Request,
     background_tasks: BackgroundTasks,

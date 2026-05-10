@@ -14,6 +14,7 @@ import {
   Loader2,
   Lock,
   RotateCcw,
+  ChevronLeft,
 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -62,6 +63,8 @@ interface Props {
   sessionId: string;
   sessionTitle?: string;
   tier?: "free" | "pro";
+  /** Mobile: called when the user taps the back arrow to return to the session list. */
+  onBack?: () => void;
   /** Called whenever the loading/streaming state changes so the parent can
    * show a per-session indicator in the sidebar. */
   onLoadingChange?: (isLoading: boolean) => void;
@@ -90,7 +93,34 @@ function UpgradeGate({
   onDismiss: () => void;
 }) {
   const { subscribe, billingLoading, billingError } = useDashboard();
+  const isRateLimit = error.code === "rate_limit_exceeded";
   const isLimit = error.code === "daily_limit_reached";
+
+  // Rate-limit errors: just a dismissible notice, no upgrade prompt.
+  if (isRateLimit) {
+    return (
+      <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-4 pb-3">
+        <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3">
+          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Slow down a bit
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              {error.message}
+            </p>
+          </div>
+          <button
+            onClick={onDismiss}
+            className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-200 text-lg leading-none shrink-0"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 pt-4 pb-3">
@@ -125,12 +155,12 @@ function UpgradeGate({
           disabled={billingLoading !== null}
           className="flex items-center justify-between gap-2 px-4 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-60 transition-colors"
         >
-          <span>Pro Monthly</span>
+          <span>7-day Free Trial</span>
           <span className="flex items-center gap-1">
             {billingLoading === "monthly" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <span className="font-bold">$9.99/mo</span>
+              <span className="font-bold text-[11px] font-normal opacity-80">then $9.99/mo</span>
             )}
           </span>
         </button>
@@ -163,7 +193,7 @@ function UpgradeGate({
   );
 }
 
-export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingChange }: Props) {
+export function ChatWindow({ sessionId, sessionTitle, tier = "free", onBack, onLoadingChange }: Props) {
   const { isLoaded: clerkLoaded } = useAuth();
   const { user: clerkUser } = useUser();
   const { messages, isLoading, streamingContent, thinkingStatus, subscriptionError, setSubscriptionError, sendError, setSendError, loadMessages, sendMessage, regenerate, stopGeneration } =
@@ -207,6 +237,17 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free", onLoadingCh
 
         {/* Main title row */}
         <div className="relative flex items-center gap-3 px-5 pt-4 pb-2.5">
+          {/* Mobile back button */}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:hidden flex items-center justify-center w-10 h-10 -ml-2 mr-1 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors touch-manipulation shrink-0"
+              aria-label="Back to sessions"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
           {/* Icon — larger with layered glow */}
           <div className="relative shrink-0">
             <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-br from-indigo-500/35 to-violet-600/35 blur-xl" />

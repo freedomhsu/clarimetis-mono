@@ -115,6 +115,7 @@ async def delete_user_data(clerk_user_id: str, db: AsyncSession) -> dict[str, An
             "clerk webhook: GCS purge failed for clerk_user_id=%s: %s",
             clerk_user_id,
             exc,
+            exc_info=True,
         )
 
     # Delete the User row — FK cascades handle sessions → messages → embeddings.

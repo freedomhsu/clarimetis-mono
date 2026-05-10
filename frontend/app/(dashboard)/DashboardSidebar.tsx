@@ -18,6 +18,7 @@ import {
   Sparkles,
   Globe,
   Check,
+  X,
 } from "lucide-react";
 import { useDashboard } from "@/components/providers/DashboardContext";
 import { useI18n } from "@/components/providers/I18nContext";
@@ -103,7 +104,12 @@ function LanguagePicker() {
   );
 }
 
-export default function DashboardSidebar() {
+interface SidebarProps {
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+}
+
+export default function DashboardSidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const { tier, openBillingPortal } = useDashboard();
   const { t } = useI18n();
@@ -122,7 +128,20 @@ export default function DashboardSidebar() {
   ];
 
   return (
-    <aside className="w-64 shrink-0 bg-white dark:bg-[#0c0c18] border-r border-slate-200 dark:border-white/[0.05] flex flex-col">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 w-64 flex flex-col bg-white dark:bg-[#0c0c18] border-r border-slate-200 dark:border-white/[0.05] transition-transform duration-300 ease-in-out md:relative md:inset-auto md:z-auto md:translate-x-0 md:shrink-0 ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
+      {/* Mobile close button */}
+      <button
+        type="button"
+        onClick={onMobileClose}
+        className="absolute top-3.5 right-3.5 flex md:hidden items-center justify-center w-9 h-9 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors touch-manipulation"
+        aria-label="Close navigation"
+      >
+        <X size={18} />
+      </button>
 
       {/* ── Brand header ── */}
       <div className="relative overflow-hidden px-5 py-5 shrink-0">
@@ -166,6 +185,7 @@ export default function DashboardSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onMobileClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                 isActive
                   ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200/70 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200 shadow-sm"
@@ -201,6 +221,7 @@ export default function DashboardSidebar() {
             <Link
               key={label}
               href={href}
+              onClick={onMobileClose}
               className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
                 isActive
                   ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200/70 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200"

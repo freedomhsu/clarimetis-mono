@@ -98,8 +98,8 @@ test.describe("Daily limit reached (429)", () => {
 
     await expect(page.getByText(/daily limit reached/i)).toBeVisible({ timeout: 8_000 });
 
-    // UpgradeGate renders Pro Monthly and Pro Annual buttons
-    await expect(page.getByRole("button", { name: /pro monthly/i })).toBeVisible();
+    // UpgradeGate renders Free Trial and Pro Annual buttons
+    await expect(page.getByRole("button", { name: /free trial/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /pro annual/i })).toBeVisible();
 
     // MessageInput (the textarea) should no longer be visible
@@ -153,7 +153,7 @@ test.describe("Pro feature required (402)", () => {
     await page.getByRole("button", { name: /send/i }).click();
 
     await expect(page.getByText(/pro feature/i)).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByRole("button", { name: /pro monthly/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /free trial/i })).toBeVisible();
   });
 });
 

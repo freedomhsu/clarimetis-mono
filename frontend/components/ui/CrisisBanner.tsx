@@ -31,7 +31,7 @@ export function CrisisBanner() {
       </div>
       <button
         onClick={() => setDismissed(true)}
-        className="text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0"
+        className="text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0 p-1 touch-manipulation"
         aria-label={t("crisis_dismiss")}
       >
         <X size={15} />

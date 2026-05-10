@@ -39,7 +39,8 @@ async def handle_stripe_webhook(
             # Immediately mark the user as Pro when checkout succeeds.
             # This fires before customer.subscription.created and avoids
             # the frontend polling window being too narrow.
-            if obj.get("mode") == "subscription" and obj.get("payment_status") == "paid":
+            # For trials, payment_status is "no_payment_required" (card is saved but not charged yet).
+            if obj.get("mode") == "subscription" and obj.get("payment_status") in ("paid", "no_payment_required"):
                 customer_id = obj.get("customer")
                 if customer_id:
                     result = await db.execute(
@@ -96,6 +97,6 @@ async def handle_stripe_webhook(
     except Exception as exc:
         # Log but always return 200 so Stripe does not retry — the event has been received.
         # Persistent failures should be investigated via logs / Stripe dashboard.
-        logger.error("stripe webhook: error processing event %s — %s", event_type, exc)
+        logger.error("stripe webhook: error processing event %s — %s", event_type, exc, exc_info=True)
 
     return {"received": True}

@@ -8,9 +8,12 @@ The score feeds into the Telemetry Engine's V_sent variable:
 """
 
 import json
+import logging
 
 from app.services.llm_utils import gemini_generate
 from app.services.utils import strip_markdown_json
+
+logger = logging.getLogger(__name__)
 
 _SENTIMENT_PROMPT = """You are a sentiment analyser for a wellness coaching app.
 Score the emotional valence of the following user message on a continuous scale from -1.0 (very negative / distressed) to +1.0 (very positive / content), where 0.0 is neutral.
@@ -31,4 +34,5 @@ async def score_sentiment(text: str) -> float:
         score = float(data.get("score", 0.0))
         return max(-1.0, min(1.0, score))  # clamp to valid range
     except Exception:
+        logger.warning("sentiment: scoring failed, returning neutral 0.0", exc_info=True)
         return 0.0
