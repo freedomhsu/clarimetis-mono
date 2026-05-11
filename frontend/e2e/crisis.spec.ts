@@ -112,7 +112,7 @@ test.describe("Crisis banner", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
     // The permanent footer is always shown — "In crisis? Call or text 988"
-    await expect(page.getByText(/in crisis\?/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible({ timeout: 8_000 });
   });
 
   test("CrisisBanner footer contains a working link to 988lifeline.org", async ({ page }) => {
@@ -125,7 +125,7 @@ test.describe("Crisis banner", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await expect(page.getByText(/in crisis\?/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible({ timeout: 8_000 });
 
     const link = page.getByRole("link", { name: /988lifeline\.org/i });
     await expect(link).toBeVisible();
@@ -166,6 +166,6 @@ test.describe("Crisis banner", () => {
 
     // The AI reply should appear; permanent footer is always visible
     await expect(page.getByText(new RegExp(aiReply, "i")).first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/in crisis\?/i)).toBeVisible();
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible();
   });
 });
