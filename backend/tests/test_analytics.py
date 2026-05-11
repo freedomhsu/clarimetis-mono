@@ -91,7 +91,7 @@ def _make_summary_db(
     db = AsyncMock()
     db.commit = AsyncMock()
     db.add = MagicMock()
-    db.scalar.side_effect = [session_count, message_count]
+    db.scalar.side_effect = [session_count, message_count, None]
 
     snippets_result = MagicMock()
     snippets_result.fetchall.return_value = [(s,) for s in (snippets or [])]
@@ -600,7 +600,8 @@ async def test_summary_caches_successful_result():
     db = AsyncMock()
     db.commit = AsyncMock()
     db.add = MagicMock()
-    db.scalar.side_effect = [5, 42, 5, 42]
+    # First request: session_count, message_count, today-snapshot-check; second hits cache.
+    db.scalar.side_effect = [5, 42, None]
     snippets_result = MagicMock()
     snippets_result.fetchall.return_value = [("msg1",)]
     db.execute.return_value = snippets_result
@@ -789,7 +790,7 @@ async def test_summary_force_true_busts_cache():
     db.commit = AsyncMock()
     db.add = MagicMock()
     # Two full sets of scalar() calls — one per request (cache won't be hit on 2nd)
-    db.scalar.side_effect = [5, 42, 5, 42]
+    db.scalar.side_effect = [5, 42, None, 5, 42, None]
     snippets_result = MagicMock()
     snippets_result.fetchall.return_value = [("msg1",)]
     db.execute.return_value = snippets_result

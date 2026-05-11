@@ -168,20 +168,47 @@ async def get_analytics_summary(
         generated_successfully = analytics.get("data_reliability") != "insufficient"
 
         if generated_successfully:
-            snapshot = ScoreSnapshot(
-                user_id=user.id,
-                confidence_score=analytics.get("confidence_score"),
-                anxiety_score=analytics.get("anxiety_score"),
-                self_esteem_score=analytics.get("self_esteem_score"),
-                ego_score=analytics.get("ego_score"),
-                emotion_control_score=analytics.get("emotion_control_score"),
-                self_awareness_score=analytics.get("self_awareness_score"),
-                motivation_score=analytics.get("motivation_score"),
-                stress_load=analytics.get("stress_load"),
-                social_gratitude_index=analytics.get("social_gratitude_index"),
-                data_reliability=analytics.get("data_reliability", "insufficient"),
+            # Only write one snapshot per UTC calendar day. If a snapshot for
+            # today already exists, update it in place so the chart doesn't
+            # accumulate multiple identical entries from repeated refreshes.
+            today_start = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
             )
-            db.add(snapshot)
+            existing = await db.scalar(
+                select(ScoreSnapshot)
+                .where(
+                    ScoreSnapshot.user_id == user.id,
+                    ScoreSnapshot.created_at >= today_start,
+                )
+                .order_by(ScoreSnapshot.created_at.desc())
+                .limit(1)
+            )
+            if existing is not None:
+                existing.confidence_score    = analytics.get("confidence_score")
+                existing.anxiety_score       = analytics.get("anxiety_score")
+                existing.self_esteem_score   = analytics.get("self_esteem_score")
+                existing.ego_score           = analytics.get("ego_score")
+                existing.emotion_control_score = analytics.get("emotion_control_score")
+                existing.self_awareness_score  = analytics.get("self_awareness_score")
+                existing.motivation_score    = analytics.get("motivation_score")
+                existing.stress_load         = analytics.get("stress_load")
+                existing.social_gratitude_index = analytics.get("social_gratitude_index")
+                existing.data_reliability    = analytics.get("data_reliability", "insufficient")
+            else:
+                snapshot = ScoreSnapshot(
+                    user_id=user.id,
+                    confidence_score=analytics.get("confidence_score"),
+                    anxiety_score=analytics.get("anxiety_score"),
+                    self_esteem_score=analytics.get("self_esteem_score"),
+                    ego_score=analytics.get("ego_score"),
+                    emotion_control_score=analytics.get("emotion_control_score"),
+                    self_awareness_score=analytics.get("self_awareness_score"),
+                    motivation_score=analytics.get("motivation_score"),
+                    stress_load=analytics.get("stress_load"),
+                    social_gratitude_index=analytics.get("social_gratitude_index"),
+                    data_reliability=analytics.get("data_reliability", "insufficient"),
+                )
+                db.add(snapshot)
             await db.commit()
 
             analytics_cache[cache_key] = analytics
