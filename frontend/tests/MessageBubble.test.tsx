@@ -83,8 +83,8 @@ describe("MessageBubble — assistant markdown", () => {
 describe("MessageBubble — crisis banner", () => {
   it("shows crisis alert when crisis_flagged=true for assistant", () => {
     render(<MessageBubble message={makeMessage({ crisis_flagged: true })} />);
-    // CrisisAlert renders the crisis number
-    expect(screen.getByText(/988/)).toBeInTheDocument();
+    // CrisisAlert renders the crisis number (may appear in multiple nodes)
+    expect(screen.getAllByText(/988/).length).toBeGreaterThan(0);
   });
 
   it("does NOT show crisis alert when crisis_flagged=false", () => {
