@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { Mic, Volume2, VolumeX, RefreshCw } from "lucide-react";
 import { api, type Session } from "@/lib/api";
 import { useVoiceConversation, type Turn } from "@/lib/hooks/useVoiceConversation";
-import { CrisisBanner } from "@/components/ui/CrisisBanner";
+import { CrisisBanner, CrisisAlert } from "@/components/ui/CrisisBanner";
 import { formatTime } from "@/lib/voice-utils";
 
 function TurnBubble({ turn }: { turn: Turn }) {
@@ -112,7 +112,7 @@ export default function VoicePage() {
         </p>
       </div>
 
-      {hasCrisis && <CrisisBanner />}
+      {hasCrisis && <CrisisAlert />}
 
       {/* Transcript */}
       <div
@@ -249,6 +249,7 @@ export default function VoicePage() {
           50%       { transform: translateY(-5px); }
         }
       `}</style>
+      <CrisisBanner />
     </div>
   );
 }

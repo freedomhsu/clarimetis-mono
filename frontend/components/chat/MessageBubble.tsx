@@ -3,7 +3,7 @@
 import { Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Message } from "@/lib/api";
-import { CrisisBanner } from "@/components/ui/CrisisBanner";
+import { CrisisAlert } from "@/components/ui/CrisisBanner";
 
 interface Props {
   message: Message;
@@ -40,7 +40,7 @@ export function MessageBubble({ message, userImageUrl }: Props) {
       )}
 
       <div className="max-w-[72%] space-y-1">
-        {message.crisis_flagged && !isUser && <CrisisBanner />}
+        {message.crisis_flagged && !isUser && <CrisisAlert />}
 
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
