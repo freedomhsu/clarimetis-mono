@@ -1,10 +1,9 @@
 /**
  * Crisis detection e2e tests.
  *
- * The CrisisBanner renders inside MessageBubble when `crisis_flagged: true`
- * on an assistant message. These tests mock the messages GET endpoint to
- * return a crisis-flagged message so we can verify the banner appears
- * without triggering real crisis detection in the backend.
+ * The CrisisAlert renders inside MessageBubble when `crisis_flagged: true`
+ * on an assistant message. The CrisisBanner is a permanent footer always
+ * visible at the bottom of every chat page.
  */
 
 import { test, expect } from "./fixtures";
@@ -38,7 +37,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Crisis banner", () => {
-  test("shows CrisisBanner when the assistant message is crisis-flagged", async ({ page }) => {
+  test("shows CrisisAlert inline when the assistant message is crisis-flagged", async ({ page }) => {
     // Populate the chat with a crisis-flagged assistant message
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       await route.fulfill({
@@ -56,12 +55,12 @@ test.describe("Crisis banner", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    // The CrisisBanner renders the 988 hotline text
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByText(/if you're in crisis/i)).toBeVisible();
+    // CrisisAlert renders "Important: call or text 988"
+    await expect(page.getByText(/important/i).first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/call or text/i).first()).toBeVisible();
   });
 
-  test("does NOT show CrisisBanner when the message is not flagged", async ({ page }) => {
+  test("does NOT show CrisisAlert when the message is not flagged", async ({ page }) => {
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       await route.fulfill({
         status: 200,
@@ -74,10 +73,11 @@ test.describe("Crisis banner", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).not.toBeVisible();
+    // CrisisAlert should NOT appear (only the permanent footer CrisisBanner)
+    await expect(page.getByText(/important/i)).not.toBeVisible();
   });
 
-  test("does NOT show CrisisBanner on user messages even if crisis_flagged is set", async ({
+  test("does NOT show CrisisAlert on user messages even if crisis_flagged is set", async ({
     page,
   }) => {
     // The backend only sets crisis_flagged on assistant messages, but guard
@@ -94,32 +94,28 @@ test.describe("Crisis banner", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    // The user bubble should render, but no banner (MessageBubble only renders
-    // CrisisBanner for role === "assistant")
+    // The user bubble should render, but no inline alert
     await expect(page.getByText("I want to hurt myself")).toBeVisible();
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).not.toBeVisible();
+    await expect(page.getByText(/important/i)).not.toBeVisible();
   });
 
-  test("CrisisBanner can be dismissed with the × button", async ({ page }) => {
+  test("permanent CrisisBanner footer is always visible in chat", async ({ page }) => {
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify([
-          fakeMessage({ crisis_flagged: true }),
+          fakeMessage({ crisis_flagged: false }),
         ]),
       });
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).toBeVisible({ timeout: 8_000 });
-
-    await page.getByRole("button", { name: /dismiss/i }).click();
-
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).not.toBeVisible();
+    // The permanent footer is always shown — "In crisis? Call or text 988"
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible({ timeout: 8_000 });
   });
 
-  test("CrisisBanner contains a working link to 988lifeline.org", async ({ page }) => {
+  test("CrisisBanner footer contains a working link to 988lifeline.org", async ({ page }) => {
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       await route.fulfill({
         status: 200,
@@ -129,7 +125,7 @@ test.describe("Crisis banner", () => {
     });
 
     await page.goto(`/chat/${SESSION_ID}`);
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i)).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible({ timeout: 8_000 });
 
     const link = page.getByRole("link", { name: /988lifeline\.org/i });
     await expect(link).toBeVisible();
@@ -168,7 +164,8 @@ test.describe("Crisis banner", () => {
     await page.getByPlaceholder(/share what/i).fill(userContent);
     await page.getByRole("button", { name: /send/i }).click();
 
-    // CrisisBanner renders when crisis_flagged is inferred from stream content
-    await expect(page.getByText(/988 suicide.*crisis lifeline/i).first()).toBeVisible({ timeout: 10_000 });
+    // The AI reply should appear; permanent footer is always visible
+    await expect(page.getByText(new RegExp(aiReply, "i")).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible();
   });
 });

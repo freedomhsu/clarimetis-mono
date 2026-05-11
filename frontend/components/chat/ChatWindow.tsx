@@ -17,6 +17,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
+import { CrisisBanner } from "@/components/ui/CrisisBanner";
 import { MessageInput } from "./MessageInput";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useChat } from "@/lib/hooks/useChat";
@@ -412,6 +413,7 @@ export function ChatWindow({ sessionId, sessionTitle, tier = "free", onBack, onL
           <MessageInput onSend={sendMessage} onStop={stopGeneration} isStreaming={isLoading} disabled={!clerkLoaded} onSubscriptionError={setSubscriptionError} />
         </div>
       )}
+      <CrisisBanner />
     </div>
   );
 }

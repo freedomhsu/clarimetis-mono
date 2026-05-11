@@ -81,31 +81,24 @@ describe("MessageBubble — assistant markdown", () => {
 // ── crisis banner ──────────────────────────────────────────────────────────
 
 describe("MessageBubble — crisis banner", () => {
-  it("shows CrisisBanner when crisis_flagged=true for assistant", () => {
+  it("shows crisis alert when crisis_flagged=true for assistant", () => {
     render(<MessageBubble message={makeMessage({ crisis_flagged: true })} />);
-    // CrisisBanner renders a unique "Important" heading
-    expect(screen.getByText("Important")).toBeInTheDocument();
+    // CrisisAlert renders the crisis number (may appear in multiple nodes)
+    expect(screen.getAllByText(/988/).length).toBeGreaterThan(0);
   });
 
-  it("does NOT show CrisisBanner when crisis_flagged=false", () => {
+  it("does NOT show crisis alert when crisis_flagged=false", () => {
     render(<MessageBubble message={makeMessage({ crisis_flagged: false })} />);
-    expect(screen.queryByText(/If you're in crisis/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/988/i)).not.toBeInTheDocument();
   });
 
-  it("does NOT show CrisisBanner for user messages even when crisis_flagged=true", () => {
+  it("does NOT show crisis alert for user messages even when crisis_flagged=true", () => {
     render(
       <MessageBubble
         message={makeMessage({ role: "user", crisis_flagged: true, content: "hi" })}
       />
     );
-    expect(screen.queryByText(/If you're in crisis/i)).not.toBeInTheDocument();
-  });
-
-  it("CrisisBanner can be dismissed", async () => {
-    const user = userEvent.setup();
-    render(<MessageBubble message={makeMessage({ crisis_flagged: true })} />);
-    await user.click(screen.getByRole("button", { name: /dismiss/i }));
-    expect(screen.queryByText(/If you're in crisis/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/988/i)).not.toBeInTheDocument();
   });
 });
 

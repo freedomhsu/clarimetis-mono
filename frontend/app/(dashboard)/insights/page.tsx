@@ -738,13 +738,14 @@ function InsightsContent({ data, history }: { data: AnalyticsSummary; history: S
         </div>
       </div>
 
+      {/* ── Score trends — full width above the column grid ── */}
+      <ScoreHistoryChart history={history} />
+
       {/* ── Two-column body ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5 items-start">
 
         {/* ===== LEFT COLUMN ===== */}
         <div className="space-y-5">
-
-          <ScoreHistoryChart history={history} />
 
           {/* Psychological Profile — unique card with ambient depth + overflow-hidden */}
           <div className="relative bg-white dark:bg-[#13131f] rounded-2xl border border-slate-200 dark:border-indigo-900/40 p-6 overflow-hidden">
