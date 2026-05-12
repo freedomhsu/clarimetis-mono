@@ -181,6 +181,19 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(check_message_quota),
 ) -> StreamingResponse:
+    # Fetch a small slice of recent history upfront so the intent classifier
+    # can route short follow-up messages correctly (e.g. "yes", "exactly that").
+    recent_rows = await db.execute(
+        select(Message)
+        .where(Message.session_id == session.id)
+        .order_by(Message.created_at.desc())
+        .limit(6)
+    )
+    recent_history = [
+        {"role": m.role, "content": m.content}
+        for m in reversed(list(recent_rows.scalars().all()))
+    ]
+
     # Run blocking pre-work before the stream so that:
     #   a) the user message is committed to DB before we return a response,
     #      ensuring subsequent requests' quota checks see the correct count; and
@@ -189,7 +202,7 @@ async def send_message(
     # get_user_profile_context uses the same DB session so must run separately.
     crisis_result, intent, guardrail_result = await asyncio.gather(
         detect_crisis(body.content),
-        classify_intent(body.content),
+        classify_intent(body.content, recent_history),
         check_input(body.content),
     )
     profile_context = await get_user_profile_context(db, user.id)
