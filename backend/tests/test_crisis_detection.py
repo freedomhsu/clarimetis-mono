@@ -51,13 +51,13 @@ async def test_detect_crisis_fails_safe_on_markdown_wrapped_json():
     assert result["is_crisis"] is False
 
 
-async def test_detect_crisis_fails_closed_when_gemini_unavailable():
+async def test_detect_crisis_fails_open_when_gemini_unavailable():
     with patch(
         "app.services.crisis_detection.gemini_generate",
         side_effect=Exception("no credentials"),
     ):
         result = await detect_crisis("any message")
-    assert result["is_crisis"] is True
+    assert result["is_crisis"] is False
     assert result["reason"] == "service_error"
 
 

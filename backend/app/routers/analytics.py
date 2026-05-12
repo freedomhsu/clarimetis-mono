@@ -251,5 +251,30 @@ async def get_score_history(
         }
         for row in rows
     ]
+
+    # If the latest DB snapshot is from a previous UTC day (or there are no
+    # snapshots yet) but the analytics cache has a fresh result for today, append
+    # it as today's point.  This covers the case where the user visits Insights,
+    # gets a cached summary (no Gemini call → no new snapshot written), then
+    # opens the history chart — without this, today would be missing.
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    latest_is_today = rows and rows[-1].created_at >= today_start
+    if not latest_is_today:
+        analytics_cache, _ = _get_caches(settings)
+        cached = analytics_cache.get(str(user.id))
+        if cached and cached.get("data_reliability") != "insufficient":
+            points.append({
+                "date": datetime.now(timezone.utc).isoformat(),
+                "confidence":      cached.get("confidence_score"),
+                "anxiety":         cached.get("anxiety_score"),
+                "self_esteem":     cached.get("self_esteem_score"),
+                "stress":          cached.get("stress_load"),
+                "social":          cached.get("social_gratitude_index"),
+                "ego":             cached.get("ego_score"),
+                "emotion_control": cached.get("emotion_control_score"),
+                "self_awareness":  cached.get("self_awareness_score"),
+                "motivation":      cached.get("motivation_score"),
+            })
+
     return {"points": points}
 

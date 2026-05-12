@@ -172,11 +172,37 @@ async def stream_chat_response(
             except Exception as exc:
                 logger.warning("Failed to attach media %s: %s", url, exc)
 
-    # Limit history to last 20 turns to manage context window
-    gemini_history = []
+    # Sanitize the raw history dicts before converting to Content objects.
+    # Gemini requires: strictly alternating user/model, starts with "user", ends with "model".
+    #
+    # Consecutive same-role turns arise when a previous assistant reply was never
+    # persisted (e.g. network drop mid-stream, background-task race on redirect) —
+    # if the DB has [..., user_N-1] with no assistant response and we exclude the
+    # current user_N, the history ends on a user turn.  Passing that to Gemini
+    # causes it to respond to user_N-1 instead of the current message.
+    sanitized: list[dict] = []
     for msg in conversation_history[-20:]:
-        role = "user" if msg["role"] == "user" else "model"
-        gemini_history.append(Content(role=role, parts=[Part.from_text(msg["content"])]))
+        role = msg["role"]  # "user" or "assistant"
+        if sanitized and sanitized[-1]["role"] == role:
+            # Merge consecutive same-role turns so the history strictly alternates
+            sanitized[-1] = {"role": role, "content": sanitized[-1]["content"] + "\n" + msg["content"]}
+        else:
+            sanitized.append({"role": role, "content": msg["content"]})
+    # Strip leading assistant turns (Gemini rejects histories that don't start with "user")
+    while sanitized and sanitized[0]["role"] != "user":
+        sanitized.pop(0)
+    # Strip trailing user turns (send_message adds the new "user" turn; having two
+    # consecutive user turns causes the model to answer the wrong one)
+    while sanitized and sanitized[-1]["role"] != "assistant":
+        sanitized.pop()
+
+    gemini_history = [
+        Content(
+            role="user" if msg["role"] == "user" else "model",
+            parts=[Part.from_text(msg["content"])],
+        )
+        for msg in sanitized
+    ]
 
     chat = model.start_chat(history=gemini_history, response_validation=False)
 

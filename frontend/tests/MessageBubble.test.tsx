@@ -79,26 +79,14 @@ describe("MessageBubble — assistant markdown", () => {
 });
 
 // ── crisis banner ──────────────────────────────────────────────────────────
+// CrisisAlert was removed from MessageBubble — the permanent CrisisBanner
+// footer in ChatWindow handles the safety reminder at all times.
 
 describe("MessageBubble — crisis banner", () => {
-  it("shows crisis alert when crisis_flagged=true for assistant", () => {
+  it("does NOT render inline crisis alert regardless of crisis_flagged", () => {
     render(<MessageBubble message={makeMessage({ crisis_flagged: true })} />);
-    // CrisisAlert renders the crisis number (may appear in multiple nodes)
-    expect(screen.getAllByText(/988/).length).toBeGreaterThan(0);
-  });
-
-  it("does NOT show crisis alert when crisis_flagged=false", () => {
-    render(<MessageBubble message={makeMessage({ crisis_flagged: false })} />);
-    expect(screen.queryByText(/988/i)).not.toBeInTheDocument();
-  });
-
-  it("does NOT show crisis alert for user messages even when crisis_flagged=true", () => {
-    render(
-      <MessageBubble
-        message={makeMessage({ role: "user", crisis_flagged: true, content: "hi" })}
-      />
-    );
-    expect(screen.queryByText(/988/i)).not.toBeInTheDocument();
+    // No inline 988 text in the bubble — footer handles this
+    expect(screen.queryByText(/important/i)).not.toBeInTheDocument();
   });
 });
 

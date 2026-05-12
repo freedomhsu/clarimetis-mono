@@ -782,6 +782,41 @@ async def test_history_returns_chronological_order():
     assert resp.json()["points"][-1]["confidence"] == 71
 
 
+async def test_history_appends_today_from_cache_when_no_snapshot_today():
+    """If the latest DB snapshot is from a previous day but the analytics cache
+    has a fresh result, the history endpoint must append today as a virtual point.
+    This covers the common case where the user visits Insights and gets a cached
+    summary (no Gemini call → no new DB snapshot) then opens the history chart."""
+    past_date = datetime(2026, 5, 11, 10, 0, 0, tzinfo=timezone.utc)
+    row = _make_snapshot(created_at=past_date, confidence_score=60)
+    db = _make_history_db([row])
+    _override(db)
+
+    cached_analytics = dict(_FULL_GEMINI_RESULT)
+    cached_analytics["confidence_score"] = 75
+    cached_analytics["data_reliability"] = "high"
+
+    try:
+        with patch("app.routers.analytics._get_caches") as mock_get_caches:
+            mock_cache = {_PRO_USER.id.__str__(): cached_analytics}
+            mock_get_caches.return_value = (mock_cache, {})
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                resp = await client.get("/api/v1/analytics/history")
+    finally:
+        _clear()
+
+    assert resp.status_code == 200
+    points = resp.json()["points"]
+    # Must have the DB point + today's cached point
+    assert len(points) == 2
+    assert points[0]["confidence"] == 60   # DB snapshot from yesterday
+    assert points[1]["confidence"] == 75   # Today from cache
+    # Today's point must have a timestamp >= past_date
+    from datetime import datetime as _dt
+    today_dt = _dt.fromisoformat(points[1]["date"])
+    assert today_dt > past_date
+
+
 # ── force=true cache-busting ──────────────────────────────────────────────────
 
 async def test_summary_force_true_busts_cache():

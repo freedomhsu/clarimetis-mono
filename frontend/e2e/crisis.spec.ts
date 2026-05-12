@@ -1,9 +1,12 @@
 /**
  * Crisis detection e2e tests.
  *
- * The CrisisAlert renders inside MessageBubble when `crisis_flagged: true`
- * on an assistant message. The CrisisBanner is a permanent footer always
- * visible at the bottom of every chat page.
+ * The CrisisAlert inline component has been removed — the permanent CrisisBanner
+ * footer at the bottom of every chat page now handles the safety reminder for all
+ * messages at all times. crisis_flagged=true no longer renders anything extra in
+ * the message bubble itself.
+ *
+ * The CrisisBanner footer is always visible regardless of crisis_flagged state.
  */
 
 import { test, expect } from "./fixtures";
@@ -37,7 +40,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Crisis banner", () => {
-  test("shows CrisisAlert inline when the assistant message is crisis-flagged", async ({ page }) => {
+  test("crisis_flagged message renders normally — no inline alert, permanent footer visible", async ({ page }) => {
     // Populate the chat with a crisis-flagged assistant message
     await page.route(`${API_URL}/api/v1/sessions/${SESSION_ID}/messages`, async (route) => {
       await route.fulfill({
@@ -55,9 +58,14 @@ test.describe("Crisis banner", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    // CrisisAlert renders "Important: call or text 988"
-    await expect(page.getByText(/important/i).first()).toBeVisible({ timeout: 8_000 });
-    await expect(page.getByText(/call or text/i).first()).toBeVisible();
+    // The message text renders normally
+    await expect(page.getByText(/going through a really hard time/i)).toBeVisible({ timeout: 8_000 });
+
+    // No inline "Important: call or text 988" alert in the bubble
+    await expect(page.getByText(/important.*call or text/i)).not.toBeVisible();
+
+    // The permanent CrisisBanner footer is always visible
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible();
   });
 
   test("does NOT show CrisisAlert when the message is not flagged", async ({ page }) => {
@@ -73,8 +81,10 @@ test.describe("Crisis banner", () => {
 
     await page.goto(`/chat/${SESSION_ID}`);
 
-    // CrisisAlert should NOT appear (only the permanent footer CrisisBanner)
-    await expect(page.getByText(/important/i)).not.toBeVisible();
+    // No inline "Important: call or text 988" alert in the bubble
+    await expect(page.getByText(/important.*call or text/i)).not.toBeVisible();
+    // But the permanent footer is still there
+    await expect(page.getByText(/in crisis\?/i).first()).toBeVisible();
   });
 
   test("does NOT show CrisisAlert on user messages even if crisis_flagged is set", async ({
@@ -96,7 +106,7 @@ test.describe("Crisis banner", () => {
 
     // The user bubble should render, but no inline alert
     await expect(page.getByText("I want to hurt myself")).toBeVisible();
-    await expect(page.getByText(/important/i)).not.toBeVisible();
+    await expect(page.getByText(/important.*call or text/i)).not.toBeVisible();
   });
 
   test("permanent CrisisBanner footer is always visible in chat", async ({ page }) => {
