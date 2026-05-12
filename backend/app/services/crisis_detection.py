@@ -31,11 +31,13 @@ async def detect_crisis(content: str) -> dict:
             # Fail safe: treat unparseable response as potential crisis.
             return {"is_crisis": True, "confidence": 0.0, "reason": "parse_error"}
     except Exception as exc:
-        # Fail **closed**: any error is treated as a potential crisis.
-        # It is safer to surface the crisis banner unnecessarily than to miss a real one.
+        # Fail **open** on service/network errors: if our detector is down, we
+        # can't confirm a crisis, so we don't flag the message.  The permanent
+        # crisis footer in the UI is always visible regardless.
+        # We only fail closed on parse errors above (model responded but ambiguously).
         logger.error(
-            "crisis_detection: Gemini call failed — failing safe, treating as crisis: %s",
+            "crisis_detection: Gemini call failed — not flagging message: %s",
             exc,
             exc_info=True,
         )
-        return {"is_crisis": True, "confidence": 0.0, "reason": "service_error"}
+        return {"is_crisis": False, "confidence": 0.0, "reason": "service_error"}
