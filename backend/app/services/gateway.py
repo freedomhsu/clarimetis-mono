@@ -114,13 +114,25 @@ Your core approach:
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
-async def classify_intent(message: str) -> str:
+async def classify_intent(message: str, recent_history: list[dict] | None = None) -> str:
     """Classify the user's message into a specialist intent.
+
+    ``recent_history`` should be the last few turns (role/content dicts) so
+    the classifier can route short follow-up replies correctly instead of
+    misrouting based on a one-word answer like "yes" or "exactly".
 
     Returns one of the INTENT_* constants. Defaults to INTENT_WELLNESS_COACH
     on any classification error so the chat never breaks.
     """
-    prompt = f"{_CLASSIFIER_PROMPT}\n\nUser message: {message[:1000]}"
+    if recent_history:
+        turns = "\n".join(
+            f"{m['role'].upper()}: {m['content'][:300]}"
+            for m in recent_history[-6:]
+        )
+        context_block = f"\n\nRecent conversation context (last few turns):\n{turns}\n"
+    else:
+        context_block = ""
+    prompt = f"{_CLASSIFIER_PROMPT}{context_block}\nLatest user message: {message[:1000]}"
     try:
         raw = strip_markdown_json(await gemini_generate(prompt, timeout=10.0))
         data = json.loads(raw)
