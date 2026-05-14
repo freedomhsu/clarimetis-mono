@@ -38,6 +38,7 @@ def _is_skippable(stmt: str) -> bool:
         r"|DROP\s+TRIGGER"
         r"|CREATE\s+TRIGGER"
         r"|ADD\s+CONSTRAINT"             # ALTER TABLE ADD CONSTRAINT not supported in SQLite
+        r"|DROP\s+CONSTRAINT"            # ALTER TABLE DROP CONSTRAINT not supported in SQLite
         r"|VALIDATE\s+CONSTRAINT",       # ALTER TABLE VALIDATE CONSTRAINT (Postgres-only)
         re.IGNORECASE,
     )

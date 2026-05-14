@@ -280,7 +280,7 @@ async def send_message(
 
         chat_model = (
             settings.gemini_pro_model
-            if user.subscription_tier == "pro"
+            if user.subscription_tier in ("pro", "enterprise")
             else settings.gemini_flash_model
         )
         async for chunk in stream_chat_response(

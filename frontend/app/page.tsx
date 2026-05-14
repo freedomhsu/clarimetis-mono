@@ -13,6 +13,7 @@ import {
   Brain,
   ArrowRight,
   Check,
+  Building2,
 } from "lucide-react";
 
 const features = [
@@ -75,6 +76,7 @@ const tiers = [
     cta: "Get Started Free",
     href: "/sign-up",
     highlighted: false,
+    enterprise: false,
     items: ["5 messages per day", "All coaching agents", "Session history"],
   },
   {
@@ -85,6 +87,7 @@ const tiers = [
     cta: "Start Free Trial",
     href: "/sign-up",
     highlighted: true,
+    enterprise: false,
     items: [
       "Unlimited messages",
       "Voice input",
@@ -101,9 +104,29 @@ const tiers = [
     cta: "Start Annual",
     href: "/sign-up",
     highlighted: false,
+    enterprise: false,
     items: [
       "Everything in Pro Monthly",
       "Best value — save $20.88/yr",
+    ],
+  },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    description: "For teams, clinics, and HR programs.",
+    cta: "Contact Us",
+    href: "/enterprise",
+    highlighted: false,
+    enterprise: true,
+    items: [
+      "Everything in Pro",
+      "Team seat management",
+      "SSO / SAML login",
+      "Dedicated onboarding",
+      "SLA & priority support",
+      "Custom data retention",
+      "HIPAA BAA available",
     ],
   },
 ];
@@ -236,13 +259,15 @@ export default async function HomePage() {
               Start free. Upgrade when you&apos;re ready.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {tiers.map((tier) => (
               <div
                 key={tier.name}
                 className={`relative rounded-2xl p-8 border flex flex-col overflow-hidden ${
                   tier.highlighted
                     ? "border-indigo-500/50 bg-gradient-to-br from-indigo-500 to-violet-600 shadow-2xl shadow-indigo-900/30 ring-1 ring-white/[0.10]"
+                    : tier.enterprise
+                    ? "border-amber-400/40 dark:border-amber-500/30 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-[#1a1508] dark:to-[#131310] shadow-lg shadow-amber-900/10"
                     : "border-slate-200 dark:border-indigo-900/40 bg-white dark:bg-[#13131f]"
                 }`}
               >
@@ -250,22 +275,49 @@ export default async function HomePage() {
                 {tier.highlighted && (
                   <div className="pointer-events-none absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-violet-400/10 to-transparent" />
                 )}
+                {/* Enterprise badge */}
+                {tier.enterprise && (
+                  <div className="absolute top-4 right-4">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-300/60 dark:border-amber-600/40 text-amber-700 dark:text-amber-400 text-[9px] font-bold uppercase tracking-widest">
+                      <Building2 size={8} />
+                      Teams
+                    </span>
+                  </div>
+                )}
 
                 <div className="mb-6">
                   <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${
-                    tier.highlighted ? "text-indigo-200" : "text-indigo-500 dark:text-indigo-400"
+                    tier.highlighted
+                      ? "text-indigo-200"
+                      : tier.enterprise
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-indigo-500 dark:text-indigo-400"
                   }`}>
                     {tier.name}
                   </p>
                   <div className="flex items-end gap-1">
-                    <span className={`text-4xl font-extrabold tracking-tight ${tier.highlighted ? "text-white" : "text-slate-900 dark:text-white"}`}>
+                    <span className={`text-4xl font-extrabold tracking-tight ${
+                      tier.highlighted
+                        ? "text-white"
+                        : tier.enterprise
+                        ? "text-amber-700 dark:text-amber-300"
+                        : "text-slate-900 dark:text-white"
+                    }`}>
                       {tier.price}
                     </span>
-                    <span className={`text-sm pb-1 ${tier.highlighted ? "text-indigo-200" : "text-slate-400"}`}>
+                    <span className={`text-sm pb-1 ${
+                      tier.highlighted ? "text-indigo-200" : tier.enterprise ? "text-amber-500" : "text-slate-400"
+                    }`}>
                       {tier.period}
                     </span>
                   </div>
-                  <p className={`text-sm mt-1 ${tier.highlighted ? "text-indigo-100" : "text-slate-500 dark:text-slate-400"}`}>
+                  <p className={`text-sm mt-1 ${
+                    tier.highlighted
+                      ? "text-indigo-100"
+                      : tier.enterprise
+                      ? "text-amber-600 dark:text-amber-500"
+                      : "text-slate-500 dark:text-slate-400"
+                  }`}>
                     {tier.description}
                   </p>
                 </div>
@@ -273,10 +325,22 @@ export default async function HomePage() {
                 <ul className="space-y-2 mb-8 flex-1">
                   {tier.items.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm">
-                      <span className={`mt-0.5 shrink-0 ${tier.highlighted ? "text-indigo-200" : "text-indigo-500 dark:text-indigo-400"}`}>
+                      <span className={`mt-0.5 shrink-0 ${
+                        tier.highlighted
+                          ? "text-indigo-200"
+                          : tier.enterprise
+                          ? "text-amber-500 dark:text-amber-400"
+                          : "text-indigo-500 dark:text-indigo-400"
+                      }`}>
                         <Check size={14} />
                       </span>
-                      <span className={tier.highlighted ? "text-white" : "text-slate-600 dark:text-slate-300"}>
+                      <span className={
+                        tier.highlighted
+                          ? "text-white"
+                          : tier.enterprise
+                          ? "text-slate-700 dark:text-slate-300"
+                          : "text-slate-600 dark:text-slate-300"
+                      }>
                         {item}
                       </span>
                     </li>
@@ -288,6 +352,8 @@ export default async function HomePage() {
                   className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
                     tier.highlighted
                       ? "bg-white text-indigo-600 hover:bg-indigo-50 shadow-md"
+                      : tier.enterprise
+                      ? "bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-white shadow-md shadow-amber-900/20 ring-1 ring-white/[0.10]"
                       : "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white shadow-md shadow-indigo-900/20 ring-1 ring-white/[0.10]"
                   }`}
                 >

@@ -56,8 +56,8 @@ _get_user = get_current_user
 
 
 async def require_pro(user: User = Depends(get_current_user)) -> User:
-    """Dependency — raises 402 if the user is not on the pro tier."""
-    if user.subscription_tier != "pro":
+    """Dependency — raises 402 if the user is not on the pro or enterprise tier."""
+    if user.subscription_tier not in ("pro", "enterprise"):
         raise _402
     return user
 
@@ -71,7 +71,7 @@ async def check_message_quota(
 
     Pro users pass through immediately with no DB query.
     """
-    if user.subscription_tier == "pro":
+    if user.subscription_tier in ("pro", "enterprise"):
         return user
 
     today_start = dt.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
